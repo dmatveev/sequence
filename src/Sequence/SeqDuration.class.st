@@ -20,6 +20,11 @@ SeqDuration >> = aDuration [
 ]
 
 { #category : #accessors }
+SeqDuration >> duration [
+	^duration
+]
+
+{ #category : #accessors }
 SeqDuration >> duration: aNumberInMS [ 
 	duration := aNumberInMS
 ]
