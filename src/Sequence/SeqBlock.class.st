@@ -5,7 +5,8 @@ Class {
 		'name',
 		'duration',
 		'consumers',
-		'producers'
+		'producers',
+		'target'
 	],
 	#category : #Sequence
 }
@@ -73,4 +74,9 @@ SeqBlock >> printOn: aStream [
 { #category : #'accessing-testing' }
 SeqBlock >> produces: aSeqBlock [
 	^self consumers includes: aSeqBlock
+]
+
+{ #category : #accessors }
+SeqBlock >> target [
+	^target ifNil: [ target := SeqTarget new ]
 ]

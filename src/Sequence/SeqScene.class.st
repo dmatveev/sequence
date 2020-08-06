@@ -3,7 +3,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'seqHead',
-		'allSeqBlocks'
+		'allSeqBlocks',
+		'seqTail'
 	],
 	#category : #Sequence
 }
@@ -19,8 +20,10 @@ SeqScene class >> startingWith: aSeqBlock [
 { #category : #private }
 SeqScene >> checkCycle: nextBlock path: aSet [
 	(aSet includes: nextBlock) ifTrue: [ SeqCycleException signal ].
+	seqTail ifNotNil: [(seqTail includes: nextBlock) ifTrue: [ ^self ]].
 	aSet add: nextBlock.
-	nextBlock consumers do: [ :each | self checkCycle: each path: aSet ].
+	nextBlock consumers do: [ :each | 
+		self checkCycle: each path: aSet ].
 	aSet remove: nextBlock.
 ]
 
@@ -37,9 +40,12 @@ SeqScene >> includes: aSeqBlock [
 	^allSeqBlocks includes: aSeqBlock
 ]
 
-{ #category : #'as yet unclassified' }
-SeqScene >> latency [
-	self shouldBeImplemented.
+{ #category : #model }
+SeqScene >> runFor: aDuration [
+	| trace |
+	trace := SeqTrace new.
+	trace targets: (allSeqBlocks collect: #target) asSet.
+	^trace
 ]
 
 { #category : #'accessing - private' }
@@ -64,7 +70,8 @@ SeqScene >> unroll [
 		"Recursively add seq blocks following the prod-cons relationship, starting with head"
 		this := stack pop.
 		"Sometimes a block may be visited more than once (e.g. with two inputs)"
-		(allSeqBlocks includes: this) ifFalse: [ 
+		(allSeqBlocks includes: this) ifFalse: [
 			this consumers do: [ :each | stack push: each ].
 			allSeqBlocks add: this ]]
+
 ]

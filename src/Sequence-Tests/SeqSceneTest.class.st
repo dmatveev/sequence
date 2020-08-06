@@ -49,3 +49,12 @@ SeqSceneTest >> testSceneRecursion2 [
 	vis >> cam.
 	self should: [SeqScene startingWith: cam] raise: SeqCycleException .
 ]
+
+{ #category : #tests }
+SeqSceneTest >> testSingleItem [
+	| cam scn |
+	cam := SeqBlock named: 'Camera'.
+	scn := SeqScene startingWith: cam.
+   self assert: (scn includes: cam).
+
+]
