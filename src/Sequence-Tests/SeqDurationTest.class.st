@@ -11,11 +11,11 @@ SeqDurationTest >> testEquality [
 
 { #category : #tests }
 SeqDurationTest >> testFPS [
-	self assert: 20 fps duration equals: 50 ms duration  
+	self assert: 20 fps equals: 50 ms   
 ]
 
 { #category : #tests }
 SeqDurationTest >> testMs [
-	self assert: 33 ms latency equals: 33.
-	self assert: 0.2 ms latency equals: 0.2.
+	self assert: 33 ms equals: (Duration milliSeconds: 33).
+	self assert: 0.2 ms equals: (Duration milliSeconds: 0.2).
 ]
