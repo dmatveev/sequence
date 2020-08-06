@@ -6,7 +6,9 @@ Class {
 		'duration',
 		'consumers',
 		'producers',
-		'target'
+		'target',
+		'allocPolicy',
+		'lanes'
 	],
 	#category : #Sequence
 }
@@ -38,6 +40,16 @@ SeqBlock >> addProducer: aSeqBlock [
 	producers add: aSeqBlock
 ]
 
+{ #category : #accessing }
+SeqBlock >> allocPolicy [
+	^allocPolicy
+]
+
+{ #category : #accessors }
+SeqBlock >> allocPolicy: aSymbol [
+	allocPolicy := aSymbol
+]
+
 { #category : #accessors }
 SeqBlock >> consumers [
 	^ consumers
@@ -50,8 +62,21 @@ SeqBlock >> consumes: aSeqBlock [
 
 { #category : #accessors }
 SeqBlock >> initialize [
+	super initialize.
 	consumers := Set new.
 	producers := Set new.
+	allocPolicy := #sparse.
+	lanes := 1.
+]
+
+{ #category : #accessors }
+SeqBlock >> lanes [
+	^lanes
+]
+
+{ #category : #accessors }
+SeqBlock >> lanes: aNumber [
+	lanes := aNumber
 ]
 
 { #category : #accessors }
