@@ -38,19 +38,20 @@ SeqTarget >> lanes: aNumber [
 ]
 
 { #category : #scheduling }
-SeqTarget >> release: aSeqBlock [ 
-	(lockedLanes at: aSeqBlock) do: [ :each | each release: aSeqBlock ]
+SeqTarget >> release: aToken [
+	(lockedLanes at: aToken) do: [ :each | each release: aToken seqBlock ]
 ]
 
 { #category : #modelling }
 SeqTarget >> tryLock: aSeqBlock at: aDuration [
-	| toLock |
+	| toLock token |
 	"Check if this resource has room to execute this block..."
 	toLock := (SeqAllocPolicy at: aSeqBlock allocPolicy) selectLanes: execLanes for: aSeqBlock lanes.
 	toLock ifEmpty: [
 		"Policy couldn't allocate anything"
-		^false ].
+		^nil ].
 	toLock do: [ :lane | lane lock: aSeqBlock at: aDuration ].
-	lockedLanes at: aSeqBlock put: toLock.
-	^true.
+	token := SeqLock with: aSeqBlock.
+	lockedLanes at: token put: toLock.
+	^token.
 ]
