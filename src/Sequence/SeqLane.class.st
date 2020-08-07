@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'currentSeqBlock',
 		'events',
-		'currentLockTime'
+		'currentLockTime',
+		'currentFrame'
 	],
 	#category : #Sequence
 }
@@ -26,16 +27,18 @@ SeqLane >> isLocked [
 ]
 
 { #category : #scheduling }
-SeqLane >> lock: aSeqBlock at: aDuration [ 
+SeqLane >> lock: aSeqBlock at: aDuration inContextOf: aFrame [
 	currentSeqBlock := aSeqBlock.
 	currentLockTime := aDuration.
+	currentFrame := aFrame.
 
 ]
 
 { #category : #sheduling }
 SeqLane >> release: aSeqBlock [ 
 	(aSeqBlock == currentSeqBlock) ifFalse: [ SeqInvalidRelease signal ].
-	events add: (SeqEvent on: currentLockTime with: currentSeqBlock ).
+	"TODO: this trio of time/block/frame is exactly an Event...
+	Probably I should use this object everywhere"
+	events add: (SeqEvent on: currentLockTime with: currentSeqBlock inContextOf: currentFrame ).
 	currentSeqBlock := nil.
-	"TODO: A new entry to event log?"
 ]

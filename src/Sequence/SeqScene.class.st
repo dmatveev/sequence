@@ -1,10 +1,15 @@
+"
+SeqScene is the main simulation vehicle in the Sequence package.
+
+"
 Class {
 	#name : #SeqScene,
 	#superclass : #Object,
 	#instVars : [
 		'seqHead',
 		'allSeqBlocks',
-		'seqTail'
+		'seqTail',
+		'topoSorted'
 	],
 	#category : #Sequence
 }
@@ -41,11 +46,23 @@ SeqScene >> includes: aSeqBlock [
 ]
 
 { #category : #model }
-SeqScene >> runFor: aDuration [
-	| trace |
-	trace := SeqTrace new.
-	trace targets: (allSeqBlocks collect: #target) asSet.
-	^trace
+SeqScene >> runFor: aDuration using: aSchedulerClass [
+	| targets scheduler |
+	targets := (allSeqBlocks collect: #target) asSet.
+	scheduler := aSchedulerClass new
+		head: seqHead;
+		topo: topoSorted;
+		targets: targets;
+		yourself.
+	scheduler runFor: aDuration.
+	^(SeqTrace on: targets)
+		numFrames: scheduler completedFrames;
+		yourself
+]
+
+{ #category : #'accessing - private' }
+SeqScene >> seqTopo [
+	^topoSorted
 ]
 
 { #category : #'accessing - private' }
@@ -54,17 +71,42 @@ SeqScene >> setStart: aCollection [
 ]
 
 { #category : #private }
+SeqScene >> tails [
+	^seqTail
+]
+
+{ #category : #'accessing - private' }
+SeqScene >> topoSort [
+	| visited |
+	"Sort the sequence in the topological order"
+	visited := Set new.
+	topoSorted := OrderedCollection new.
+	seqTail do: [ :tail | self topoSort: tail on: topoSorted using: visited ].
+]
+
+{ #category : #'accessing - private' }
+SeqScene >> topoSort: aSeqBlock on: aSortedPath using: aVisitedSet [
+	(aVisitedSet includes: aSeqBlock) ifTrue: [ ^self ].
+	aVisitedSet add: aSeqBlock.
+	aSeqBlock producers do: [ :each |
+		self topoSort: each on: aSortedPath using: aVisitedSet ].
+	aSortedPath add: aSeqBlock.
+]
+
+{ #category : #private }
 SeqScene >> traceDown [
 	"Build the internal metric for this pipeline.
 	Implementation TBD"
 	self checkCycles.
 	self unroll.
+	self topoSort.
 ]
 
 { #category : #private }
 SeqScene >> unroll [
 	| stack |
 	allSeqBlocks := Set new. "TODO: Ordered collection instead?"
+	seqTail := Set new.
 	stack := Stack withAll: seqHead.
 	[stack isEmpty] whileFalse: [ | this | 
 		"Recursively add seq blocks following the prod-cons relationship, starting with head"
@@ -72,6 +114,7 @@ SeqScene >> unroll [
 		"Sometimes a block may be visited more than once (e.g. with two inputs)"
 		(allSeqBlocks includes: this) ifFalse: [
 			this consumers do: [ :each | stack push: each ].
+			this consumers ifEmpty: [ seqTail add: this ].
 			allSeqBlocks add: this ]]
 
 ]

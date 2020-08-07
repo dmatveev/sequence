@@ -17,7 +17,7 @@ SeqLaneTest >> setUp [
 
 { #category : #tests }
 SeqLaneTest >> testLock [
-	lane lock: block at: 0 seconds.
+	lane lock: block at: 0 seconds inContextOf: 0.
 	self assert: lane isLocked.
 ]
 
@@ -29,7 +29,7 @@ SeqLaneTest >> testNewIsLocked [
 
 { #category : #tests }
 SeqLaneTest >> testRelease [
-   lane lock: block at: 0 seconds.
+   lane lock: block at: 0 seconds inContextOf: 0.
 	lane release: block.
 	self deny: lane isLocked.
 	self assert: lane events size equals: 1.

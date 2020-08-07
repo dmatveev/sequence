@@ -61,6 +61,11 @@ SeqBlock >> consumes: aSeqBlock [
 ]
 
 { #category : #accessors }
+SeqBlock >> duration [
+	^ duration
+]
+
+{ #category : #accessors }
 SeqBlock >> initialize [
 	super initialize.
 	consumers := Set new.
@@ -94,6 +99,11 @@ SeqBlock >> printOn: aStream [
 	aStream 
 		nextPutAll: 'SeqBlock:';
 		nextPutAll: name
+]
+
+{ #category : #accessors }
+SeqBlock >> producers [
+	^ producers
 ]
 
 { #category : #'accessing-testing' }

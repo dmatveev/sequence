@@ -14,7 +14,7 @@ SeqEventTest >> setUp [
 	super setUp.
 	block := 'Camera' asSeqBlock latency: 20 ms.
 	lane := SeqLane new.
-	lane lock: block at: 1 second.
+	lane lock: block at: 1 second inContextOf: 0.
 	lane release: block.
 	event := lane events first.
 ]

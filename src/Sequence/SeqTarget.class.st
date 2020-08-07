@@ -15,6 +15,11 @@ SeqTarget >> events [
 	^execLanes first events
 ]
 
+{ #category : #accessors }
+SeqTarget >> execLanes [
+	^ execLanes
+]
+
 { #category : #initialization }
 SeqTarget >> initialize [
 	super initialize.
@@ -39,18 +44,19 @@ SeqTarget >> lanes: aNumber [
 
 { #category : #scheduling }
 SeqTarget >> release: aToken [
-	(lockedLanes at: aToken) do: [ :each | each release: aToken seqBlock ]
+	(lockedLanes at: aToken) do: [ :each | each release: aToken seqBlock ].
+	lockedLanes removeKey: aToken
 ]
 
 { #category : #modelling }
-SeqTarget >> tryLock: aSeqBlock at: aDuration [
+SeqTarget >> tryLock: aSeqBlock at: aDuration inContextOf: aFrame [
 	| toLock token |
 	"Check if this resource has room to execute this block..."
 	toLock := (SeqAllocPolicy at: aSeqBlock allocPolicy) selectLanes: execLanes for: aSeqBlock lanes.
 	toLock ifEmpty: [
 		"Policy couldn't allocate anything"
 		^nil ].
-	toLock do: [ :lane | lane lock: aSeqBlock at: aDuration ].
+	toLock do: [ :lane | lane lock: aSeqBlock at: aDuration inContextOf: aFrame ].
 	token := SeqLock with: aSeqBlock.
 	lockedLanes at: token put: toLock.
 	^token.
