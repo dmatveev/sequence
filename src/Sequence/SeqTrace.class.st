@@ -3,7 +3,10 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'targets',
-		'numFrames'
+		'numFrames',
+		'allLanes',
+		'topo',
+		'colors'
 	],
 	#category : #Sequence
 }
@@ -20,12 +23,51 @@ SeqTrace class >> on: targets [
 		yourself
 ]
 
+{ #category : #accessors }
+SeqTrace >> allEvents [
+	| s |
+	"TODO: This operation may be costly so probably worth caching"
+	s := Set new.
+	(targets collect: #execLanes) flattened do: [:each | s addAll: each events]. 
+	^s
+]
+
+{ #category : #accessors }
+SeqTrace >> allLanes [
+	"This object needs to be cached to preserve the order in-between calls"
+	^allLanes ifNil: [ | w topoTargets |
+		w := WriteStream on: OrderedCollection new.
+		topoTargets := topo collect: #target.
+		topoTargets do: [ :each | w nextPutAll: each execLanes ].
+		allLanes := w contents ]
+]
+
+{ #category : #rendering }
+SeqTrace >> colorFor: anEvent [
+	| index |
+	"Pick an event color from a palette given the
+	block's topological index"
+	index := topo indexOf: anEvent seqBlock.
+	^self colors at: index.
+]
+
+{ #category : #rendering }
+SeqTrace >> colors [
+	^colors ifNil: [
+		colors := (RTColorPalette qualitative colors: 8 scheme: 'Set2') ]
+]
+
 { #category : #'GTInspector-Extensions' }
 SeqTrace >> gtInspectorPreviewIn: composite [
 	<gtInspectorPresentationOrder: 0>
 	^ composite roassal2
 		title: 'View';
 		painting: [ :view | self renderOn: view ]
+]
+
+{ #category : #rendering }
+SeqTrace >> laneHeight [
+	^30
 ]
 
 { #category : #modelling }
@@ -40,13 +82,25 @@ SeqTrace >> numFrames: anObject [
 ]
 
 { #category : #rendering }
+SeqTrace >> positionFor: anEvent [
+	| x y |
+	x := (anEvent startTime asMicroseconds / 1000) asFloat.
+	y := self laneHeight * (self allLanes indexOf: anEvent lane).
+	"Those are the top-left coordinates, but Roassal seem to expect a central point.."
+	^(x @ y) translateBy: ((self widthFor: anEvent)/2) @ 0
+]
+
+{ #category : #rendering }
 SeqTrace >> renderOn: view [ 
-	"Draw lanes for execution targets"
-	| es i |
-	es := (RTBox new width: 100; height: 8) elementsOn: targets.
-	i := 0.
-	es do: [ :each | each translateTo: 0 @ (i*10). i := i+1 ].
+	| box es |
+	box := RTBox new
+		width: [:x | self widthFor: x];
+		height: self laneHeight;
+		color: [ :x | self colorFor: x ].
+	es := box elementsOn: self allEvents.
+	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
+	view @ RTDoubleScrollBar.
 ]
 
 { #category : #accessors }
@@ -56,7 +110,8 @@ SeqTrace >> targets [
 
 { #category : #accessors }
 SeqTrace >> targets: aCollection [ 
-	targets := aCollection
+	targets := aCollection.
+	allLanes := nil. "Invalidate the cache"
 ]
 
 { #category : #modelling }
@@ -69,4 +124,14 @@ SeqTrace >> throughput [
 		each events detect: [ :ev | ev frame == (numFrames - 1) ]].
 	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
 	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
+]
+
+{ #category : #accessors }
+SeqTrace >> topo: aCollection [
+	topo := aCollection.
+]
+
+{ #category : #rendering }
+SeqTrace >> widthFor: anEvent [
+	^(anEvent duration asMicroseconds / 1000) asFloat
 ]

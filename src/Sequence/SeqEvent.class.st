@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'startTime',
 		'block',
-		'frame'
+		'frame',
+		'lane'
 	],
 	#category : #Sequence
 }
@@ -29,6 +30,11 @@ SeqEvent >> block: anObject [
 ]
 
 { #category : #modelling }
+SeqEvent >> duration [
+	^block duration
+]
+
+{ #category : #modelling }
 SeqEvent >> endTime [
 	^startTime + block duration
 ]
@@ -41,6 +47,16 @@ SeqEvent >> frame [
 { #category : #accessing }
 SeqEvent >> frame: anObject [
 	frame := anObject
+]
+
+{ #category : #accessing }
+SeqEvent >> lane [
+	^ lane
+]
+
+{ #category : #accessing }
+SeqEvent >> lane: anObject [
+	lane := anObject
 ]
 
 { #category : #accessors }

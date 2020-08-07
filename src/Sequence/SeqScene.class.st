@@ -57,6 +57,7 @@ SeqScene >> runFor: aDuration using: aSchedulerClass [
 	scheduler runFor: aDuration.
 	^(SeqTrace on: targets)
 		numFrames: scheduler completedFrames;
+		topo: topoSorted;
 		yourself
 ]
 

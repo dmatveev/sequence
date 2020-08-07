@@ -36,9 +36,12 @@ SeqLane >> lock: aSeqBlock at: aDuration inContextOf: aFrame [
 
 { #category : #sheduling }
 SeqLane >> release: aSeqBlock [ 
+   | ev |
 	(aSeqBlock == currentSeqBlock) ifFalse: [ SeqInvalidRelease signal ].
 	"TODO: this trio of time/block/frame is exactly an Event...
 	Probably I should use this object everywhere"
-	events add: (SeqEvent on: currentLockTime with: currentSeqBlock inContextOf: currentFrame ).
+	ev := SeqEvent on: currentLockTime with: currentSeqBlock inContextOf: currentFrame.
+	ev lane: self.
+	events add: ev.
 	currentSeqBlock := nil.
 ]
