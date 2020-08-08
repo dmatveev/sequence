@@ -120,3 +120,8 @@ SeqBlock >> produces: aSeqBlock [
 SeqBlock >> target [
 	^target ifNil: [ target := SeqTarget new ]
 ]
+
+{ #category : #accessors }
+SeqBlock >> target: aSeqTarget [ 
+	target := aSeqTarget
+]

@@ -18,6 +18,19 @@ SeqTrace class >> on: aSequence [
 		yourself
 ]
 
+{ #category : #rendering }
+SeqTrace >> addLegend: view [ 
+	| lb |
+	lb := RTLegendBuilder new.
+	lb
+		view: view;
+		gapSize: 0;
+		addText: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
+		addText: 'Utilization: ', ((100* self utilization) round: 2) asString, '%';
+		build.
+
+]
+
 { #category : #accessors }
 SeqTrace >> allEvents [
 	| s |
@@ -30,10 +43,14 @@ SeqTrace >> allEvents [
 { #category : #accessors }
 SeqTrace >> allLanes [
 	"This object needs to be cached to preserve the order in-between calls"
-	^allLanes ifNil: [ | w topoTargets |
-		w := WriteStream on: OrderedCollection new.
+	^allLanes ifNil: [ | knownTargets topoTargets w |
+		knownTargets := Set new.
 		topoTargets := sequence topoSorted collect: #target.
-		topoTargets do: [ :each | w nextPutAll: each execLanes ].
+		w := WriteStream on: OrderedCollection new.
+		topoTargets
+			reject: [:each | knownTargets includes: each]
+			thenDo: [:each | knownTargets add: each.
+								  w nextPutAll: each execLanes].
 		allLanes := w contents ]
 ]
 
@@ -96,6 +113,7 @@ SeqTrace >> renderOn: view [
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
 	view @ RTDoubleScrollBar.
+	self addLegend: view.
 ]
 
 { #category : #accessors }
@@ -111,10 +129,26 @@ SeqTrace >> throughput [
 	walk though all target's execution lanes, pick the last completed time,
 	then do some simple math..."
 	| lastEvents lastTime |
-	lastEvents := (targets collect: #execLanes) flattened collect: [ :each |
-		each events detect: [ :ev | ev frame == (numFrames - 1) ]].
+	lastEvents := self allLanes collect: [ :each |
+		each events reverse detect: [ :ev | ev frame == (numFrames - 1) ]].
 	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
 	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
+]
+
+{ #category : #rendering }
+SeqTrace >> utilization [
+	^ (allLanes collect: [:each | self utilizationOf: each]) average asFloat
+]
+
+{ #category : #rendering }
+SeqTrace >> utilizationOf: aSeqLane [
+	| total running |
+	
+	"Lane utilization is a ratio of time running to the overall execution time.
+	FIXME: the total time must be taken Sequence-wide!"
+	total := aSeqLane events last endTime.
+	running := (aSeqLane events collect: #duration) sum.
+	^ (running / total) asFloat
 ]
 
 { #category : #rendering }

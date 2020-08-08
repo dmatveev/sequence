@@ -44,3 +44,24 @@ SeqTraceTest >> testThroughput [
 	the system must be ~1000/(20+5) = 40 FPS (in case of naive execution)"
 	self assert: trace throughput equals: 40. 
 ]
+
+{ #category : #running }
+SeqTraceTest >> testThroughputBug [
+	"There was a bug with throughput calculated incorrectly if all blocks are assigned
+	to the same target (wrong event has been selected as 'last' per lane"
+	| t1 t2 | 
+	t1 := [ | a b c |
+		a := 'A' asSeqBlock latency: 5 ms.
+		b := 'B' asSeqBlock latency: 10 ms.
+		c := 'C' asSeqBlock latency: 15 ms.
+		a >> b >> c.
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler] value.
+	t2 := [ | t a b c |
+		t := SeqTarget new.
+		a := 'A' asSeqBlock latency: 5 ms; target: t.
+		b := 'B' asSeqBlock latency: 10 ms; target: t.
+		c := 'C' asSeqBlock latency: 15 ms; target: t.
+		a >> b >> c.
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler] value.
+	self assert: t1 throughput closeTo: t2 throughput
+]
