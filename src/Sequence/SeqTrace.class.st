@@ -60,7 +60,7 @@ SeqTrace >> colorFor: anEvent [
 	"Pick an event color from a palette given the
 	block's topological index"
 	index := sequence topoSorted indexOf: anEvent seqBlock.
-	^self colors at: index.
+	^self colors at: index
 ]
 
 { #category : #rendering }
@@ -79,7 +79,7 @@ SeqTrace >> gtInspectorPreviewIn: composite [
 
 { #category : #rendering }
 SeqTrace >> laneHeight [
-	^48
+	^32
 ]
 
 { #category : #modelling }
@@ -131,8 +131,12 @@ SeqTrace >> throughput [
 	walk though all target's execution lanes, pick the last completed time,
 	then do some simple math..."
 	| lastEvents lastTime |
-	lastEvents := self allLanes collect: [ :each |
-		each events reverse detect: [ :ev | ev frame == (numFrames - 1) ]].
+	lastEvents := self allLanes
+		collect: [ :each |
+			each events reverse
+				detect: [ :ev | ev frame == (numFrames - 1) ]
+				ifNone: [nil] ]
+		thenSelect: #isNotNil. "When there are multiple lanes per target, last even can be only in one of them"
 	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
 	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
 ]
@@ -145,9 +149,10 @@ SeqTrace >> utilization [
 { #category : #rendering }
 SeqTrace >> utilizationOf: aSeqLane [
 	| total running |
-	
 	"Lane utilization is a ratio of time running to the overall execution time.
 	FIXME: the total time must be taken Sequence-wide!"
+	aSeqLane events isEmptyOrNil ifTrue: [^0.0 ]. 
+
 	total := aSeqLane events last endTime.
 	running := (aSeqLane events collect: #duration) sum.
 	^ (running / total) asFloat
