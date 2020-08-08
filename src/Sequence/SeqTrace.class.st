@@ -5,21 +5,16 @@ Class {
 		'targets',
 		'numFrames',
 		'allLanes',
-		'topo',
-		'colors'
+		'colors',
+		'sequence'
 	],
 	#category : #Sequence
 }
 
-{ #category : #'as yet unclassified' }
-SeqTrace class >> numFrames: anInteger [ 
-	self shouldBeImplemented.
-]
-
 { #category : #'instance creation' }
-SeqTrace class >> on: targets [
+SeqTrace class >> on: aSequence [
 	^self new
-		targets: targets;
+		sequence: aSequence;
 		yourself
 ]
 
@@ -37,7 +32,7 @@ SeqTrace >> allLanes [
 	"This object needs to be cached to preserve the order in-between calls"
 	^allLanes ifNil: [ | w topoTargets |
 		w := WriteStream on: OrderedCollection new.
-		topoTargets := topo collect: #target.
+		topoTargets := sequence topoSorted collect: #target.
 		topoTargets do: [ :each | w nextPutAll: each execLanes ].
 		allLanes := w contents ]
 ]
@@ -47,7 +42,7 @@ SeqTrace >> colorFor: anEvent [
 	| index |
 	"Pick an event color from a palette given the
 	block's topological index"
-	index := topo indexOf: anEvent seqBlock.
+	index := sequence topoSorted indexOf: anEvent seqBlock.
 	^self colors at: index.
 ]
 
@@ -104,13 +99,9 @@ SeqTrace >> renderOn: view [
 ]
 
 { #category : #accessors }
-SeqTrace >> targets [
-	^ targets
-]
-
-{ #category : #accessors }
-SeqTrace >> targets: aCollection [ 
-	targets := aCollection.
+SeqTrace >> sequence: aSequence [
+	sequence := aSequence.
+	targets := sequence targets.
 	allLanes := nil. "Invalidate the cache"
 ]
 
@@ -124,11 +115,6 @@ SeqTrace >> throughput [
 		each events detect: [ :ev | ev frame == (numFrames - 1) ]].
 	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
 	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
-]
-
-{ #category : #accessors }
-SeqTrace >> topo: aCollection [
-	topo := aCollection.
 ]
 
 { #category : #rendering }

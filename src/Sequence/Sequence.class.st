@@ -9,7 +9,8 @@ Class {
 		'seqHead',
 		'allSeqBlocks',
 		'seqTail',
-		'topoSorted'
+		'topoSorted',
+		'targets'
 	],
 	#category : #Sequence
 }
@@ -88,9 +89,8 @@ Sequence >> runFor: aDuration using: aSchedulerClass [
 		targets: targets;
 		yourself.
 	scheduler runFor: aDuration.
-	^(SeqTrace on: targets)
+	^(SeqTrace on: self)
 		numFrames: scheduler completedFrames;
-		topo: topoSorted;
 		yourself
 ]
 
@@ -109,6 +109,12 @@ Sequence >> tails [
 	^seqTail
 ]
 
+{ #category : #accessors }
+Sequence >> targets [
+	^targets ifNil: [ 
+		targets := ((allSeqBlocks) collect: #target) asSet ]
+]
+
 { #category : #'accessing - private' }
 Sequence >> topoSort [
 	| visited |
@@ -125,6 +131,11 @@ Sequence >> topoSort: aSeqBlock on: aSortedPath using: aVisitedSet [
 	aSeqBlock producers do: [ :each |
 		self topoSort: each on: aSortedPath using: aVisitedSet ].
 	aSortedPath add: aSeqBlock.
+]
+
+{ #category : #accessors }
+Sequence >> topoSorted [
+	^ topoSorted
 ]
 
 { #category : #private }

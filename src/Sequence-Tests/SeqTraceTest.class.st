@@ -39,11 +39,6 @@ SeqTraceTest >> testNumFrames [
 ]
 
 { #category : #running }
-SeqTraceTest >> testTargets [
-	self assert: trace targets size equals: 2
-]
-
-{ #category : #running }
 SeqTraceTest >> testThroughput [
 	"Given two blocks with latency 20 & 5 ms, the throughput of
 	the system must be ~1000/(20+5) = 40 FPS (in case of naive execution)"
