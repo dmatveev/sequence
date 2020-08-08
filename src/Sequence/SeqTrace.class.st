@@ -79,7 +79,7 @@ SeqTrace >> gtInspectorPreviewIn: composite [
 
 { #category : #rendering }
 SeqTrace >> laneHeight [
-	^30
+	^48
 ]
 
 { #category : #modelling }
@@ -108,7 +108,9 @@ SeqTrace >> renderOn: view [
 	box := RTBox new
 		width: [:x | self widthFor: x];
 		height: self laneHeight;
-		color: [ :x | self colorFor: x ].
+		color: [ :x | self colorFor: x ];
+		borderColor: Color veryDarkGray;
+		borderWidth: 0.25.
 	es := box elementsOn: self allEvents.
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
