@@ -40,9 +40,42 @@ Sequence >> checkCycles [
 	]
 ]
 
+{ #category : #private }
+Sequence >> gtInspectorPreviewIn: composite [
+	<gtInspectorPresentationOrder: 0>
+	^ composite roassal2
+		title: 'View';
+		painting: [ :view | self renderOn: view ]
+]
+
 { #category : #testing }
 Sequence >> includes: aSeqBlock [ 
 	^allSeqBlocks includes: aSeqBlock
+]
+
+{ #category : #rendering }
+Sequence >> renderOn: view [
+	| boxes labels eb |
+	boxes := (RTBox new color: Color white; borderWidth: 1; borderColor: Color gray)
+		elementsOn: allSeqBlocks.
+	labels := (RTLabel text: #name) elementsOn: allSeqBlocks.
+	boxes with: labels do:
+		[ :b :l | RTNest new on: b nest: (RTGroup with: l) ].
+
+	view addAll: boxes.
+	view addAll: labels.
+	
+	"Apply tree layout"
+	eb := RTEdgeBuilder new.
+	eb shape orthoHorizontalLine.
+	eb
+		view: view;
+		elements: boxes;
+		connectToAll: [ :seqBlock | seqBlock consumers ].
+	RTHorizontalDominanceTreeLayout new on: boxes.
+	
+	view @ RTDraggableView.
+	boxes @ RTDraggable.
 ]
 
 { #category : #model }

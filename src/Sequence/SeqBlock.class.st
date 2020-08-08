@@ -89,6 +89,11 @@ SeqBlock >> latency: aSeqDuration [
 	duration := aSeqDuration 
 ]
 
+{ #category : #accessors }
+SeqBlock >> name [
+	^ name
+]
+
 { #category : #accessing }
 SeqBlock >> name: aString [ 
 	name := aString
