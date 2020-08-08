@@ -3,7 +3,7 @@ SeqScene is the main simulation vehicle in the Sequence package.
 
 "
 Class {
-	#name : #SeqScene,
+	#name : #Sequence,
 	#superclass : #Object,
 	#instVars : [
 		'seqHead',
@@ -15,7 +15,7 @@ Class {
 }
 
 { #category : #'instance creation' }
-SeqScene class >> startingWith: aSeqBlock [ 
+Sequence class >> startingWith: aSeqBlock [ 
 	^self new
 		setStart: {aSeqBlock.};
 		traceDown;
@@ -23,7 +23,7 @@ SeqScene class >> startingWith: aSeqBlock [
 ]
 
 { #category : #private }
-SeqScene >> checkCycle: nextBlock path: aSet [
+Sequence >> checkCycle: nextBlock path: aSet [
 	(aSet includes: nextBlock) ifTrue: [ SeqCycleException signal ].
 	seqTail ifNotNil: [(seqTail includes: nextBlock) ifTrue: [ ^self ]].
 	aSet add: nextBlock.
@@ -33,7 +33,7 @@ SeqScene >> checkCycle: nextBlock path: aSet [
 ]
 
 { #category : #private }
-SeqScene >> checkCycles [
+Sequence >> checkCycles [
 	seqHead do: [ :head |
 		"Recursively check if this pipeline has no cycles."
 		self checkCycle: head path: Set new.
@@ -41,12 +41,12 @@ SeqScene >> checkCycles [
 ]
 
 { #category : #testing }
-SeqScene >> includes: aSeqBlock [ 
+Sequence >> includes: aSeqBlock [ 
 	^allSeqBlocks includes: aSeqBlock
 ]
 
 { #category : #model }
-SeqScene >> runFor: aDuration using: aSchedulerClass [
+Sequence >> runFor: aDuration using: aSchedulerClass [
 	| targets scheduler |
 	targets := (allSeqBlocks collect: #target) asSet.
 	scheduler := aSchedulerClass new
@@ -62,22 +62,22 @@ SeqScene >> runFor: aDuration using: aSchedulerClass [
 ]
 
 { #category : #'accessing - private' }
-SeqScene >> seqTopo [
+Sequence >> seqTopo [
 	^topoSorted
 ]
 
 { #category : #'accessing - private' }
-SeqScene >> setStart: aCollection [ 
+Sequence >> setStart: aCollection [ 
 	seqHead := aCollection
 ]
 
 { #category : #private }
-SeqScene >> tails [
+Sequence >> tails [
 	^seqTail
 ]
 
 { #category : #'accessing - private' }
-SeqScene >> topoSort [
+Sequence >> topoSort [
 	| visited |
 	"Sort the sequence in the topological order"
 	visited := Set new.
@@ -86,7 +86,7 @@ SeqScene >> topoSort [
 ]
 
 { #category : #'accessing - private' }
-SeqScene >> topoSort: aSeqBlock on: aSortedPath using: aVisitedSet [
+Sequence >> topoSort: aSeqBlock on: aSortedPath using: aVisitedSet [
 	(aVisitedSet includes: aSeqBlock) ifTrue: [ ^self ].
 	aVisitedSet add: aSeqBlock.
 	aSeqBlock producers do: [ :each |
@@ -95,7 +95,7 @@ SeqScene >> topoSort: aSeqBlock on: aSortedPath using: aVisitedSet [
 ]
 
 { #category : #private }
-SeqScene >> traceDown [
+Sequence >> traceDown [
 	"Build the internal metric for this pipeline.
 	Implementation TBD"
 	self checkCycles.
@@ -104,7 +104,7 @@ SeqScene >> traceDown [
 ]
 
 { #category : #private }
-SeqScene >> unroll [
+Sequence >> unroll [
 	| stack |
 	allSeqBlocks := Set new. "TODO: Ordered collection instead?"
 	seqTail := Set new.
