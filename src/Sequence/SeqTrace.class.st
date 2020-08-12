@@ -27,8 +27,9 @@ SeqTrace >> addLegend: view [
 		view: view;
 		gapSize: 0;
 		addText: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
-		addText: 'Utilization: ', (percent value: self utilization) asString, '%';
-		addText: '-- Per lane: ', (self allLanes collect: [:each | percent value: each utilization]) asArray printString, '%'.
+		addText: 'Utilization: ', (percent value: self utilization) asString, '%'.
+"		Not sure if this is the best option or not
+		addText: '-- ', (self allLanes collect: [:each | percent value: each utilization]) asArray printString, '%'."
 	lb	build.
 
 ]

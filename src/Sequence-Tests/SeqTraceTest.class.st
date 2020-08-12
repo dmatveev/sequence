@@ -60,6 +60,27 @@ SeqTraceTest >> testTasks [
 ]
 
 { #category : #running }
+SeqTraceTest >> testTasksStream [
+	| a b cnt t |
+
+	"Describe Sequence blocks"
+	a := 'A' asSeqBlock latency: 1 ms.
+	b := 'B' asSeqBlock latency: 2 ms; tasks: [ :f | f data ].
+	cnt := 0.
+
+	"Define the sequence"	
+	a >> b.
+
+	"Run the simulation"
+	t := (Sequence startingWith: a)
+		runFor: 33 ms
+		using: SeqNaiveScheduler
+		on: [ cnt := (cnt + 1) % 4. ].
+		
+	self assert: t numFrames equals: 8. "Not 11, due to variadic number of B tasks"
+]
+
+{ #category : #running }
 SeqTraceTest >> testThroughput [
 	"Given two blocks with latency 20 & 5 ms, the throughput of
 	the system must be ~1000/(20+5) = 40 FPS (in case of naive execution)"
