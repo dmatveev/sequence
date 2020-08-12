@@ -45,3 +45,15 @@ SeqLane >> release: aSeqBlock [
 	events add: ev.
 	currentSeqBlock := nil.
 ]
+
+{ #category : #rendering }
+SeqLane >> utilization [
+	| total running |
+	"Lane utilization is a ratio of time running to the overall execution time.
+	FIXME: the total time must be taken Sequence-wide!"
+	events isEmptyOrNil ifTrue: [^0.0 ]. 
+
+	total := events last endTime.
+	running := (events collect: #duration) sum.
+	^ (running / total) asFloat
+]

@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'start',
 		'blk',
-		'tgt'
+		'tgt',
+		'frame'
 	],
 	#category : #'Sequence-Tests'
 }
@@ -15,13 +16,12 @@ SeqTargetTest >> setUp [
 	start := 0 seconds.
 	blk := 'Process' asSeqBlock latency: 20 ms. "1-lane seq block"
 	tgt := SeqTarget new. "1-lane target"
+	frame := SeqFrame new id: 0; timestamp: 0 seconds.
+
 ]
 
 { #category : #tests }
 SeqTargetTest >> testBusy [
-	| frame |
-	frame := 0.
-
    "Should be ok"
 	self assert: (tgt tryLock: blk at: start inContextOf: frame) isNotNil.
 
@@ -44,8 +44,7 @@ SeqTargetTest >> testLanes [
 
 { #category : #tests }
 SeqTargetTest >> testLoadedContinuous [
-	| target block tokens frame |
-	frame := 0.
+	| target block tokens |
 	target := SeqTarget new lanes: 8.
 	block := SeqBlock new latency: 20 ms; lanes: 2; allocPolicy: #continuous.
 
@@ -65,8 +64,7 @@ SeqTargetTest >> testLoadedContinuous [
 
 { #category : #tests }
 SeqTargetTest >> testLoadedSparse [
-	| target block1 block2 tokens frame |
-	frame := 0.
+	| target block1 block2 tokens |
 	target := SeqTarget new lanes: 8.
 	block1 := SeqBlock new latency: 20 ms; lanes: 2; allocPolicy: #continuous.
 	block2 := SeqBlock new latency: 25 ms; lanes: 4; allocPolicy: #sparse.
@@ -93,8 +91,7 @@ SeqTargetTest >> testLoadedSparse [
 
 { #category : #tests }
 SeqTargetTest >> testRelease [
-	| token frame |
-	frame := 0.
+	| token |
 	token := tgt tryLock: blk at: start inContextOf: frame.
 	self assert: token isNotNil. "Should be ok"
 	self assert: (tgt tryLock: blk at: (start + 10 ms) inContextOf: frame) isNil. "Resource is busy"
@@ -110,8 +107,6 @@ SeqTargetTest >> testTryLockAt [
 
 { #category : #tests }
 SeqTargetTest >> testTryLockAt2 [
-	| frame |
-	frame := 0.
 	self assert: (tgt tryLock: blk at: start inContextOf: frame) isNotNil. "Should be ok"
 	self assert: (tgt tryLock: blk at: (start + 10 ms) inContextOf: frame) isNil. "Resource is busy"
 

@@ -8,7 +8,8 @@ Class {
 		'producers',
 		'target',
 		'allocPolicy',
-		'lanes'
+		'lanes',
+		'taskBlock'
 	],
 	#category : #Sequence
 }
@@ -72,6 +73,7 @@ SeqBlock >> initialize [
 	producers := Set new.
 	allocPolicy := #sparse.
 	lanes := 1.
+	taskBlock := [ :frame | 1 ].
 ]
 
 { #category : #accessors }
@@ -124,4 +126,14 @@ SeqBlock >> target [
 { #category : #accessors }
 SeqBlock >> target: aSeqTarget [ 
 	target := aSeqTarget
+]
+
+{ #category : #tasks }
+SeqBlock >> tasks [
+	^taskBlock
+]
+
+{ #category : #accessors }
+SeqBlock >> tasks: aBlockClosure [ 
+	taskBlock := aBlockClosure
 ]

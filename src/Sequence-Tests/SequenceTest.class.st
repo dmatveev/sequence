@@ -50,7 +50,7 @@ SequenceTest >> testBasicScene2Topo [
 	vis := SeqBlock named: 'Visualization'.
 	cam >> pro >> vis.
 	cam >> vis.
-	topo := (Sequence startingWith: cam) seqTopo.
+	topo := (Sequence startingWith: cam) topoSorted.
 	self assert: topo size equals: 3.
 	self assert: topo equals: { cam. pro. vis } asOrderedCollection 
 ]

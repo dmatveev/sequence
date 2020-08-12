@@ -81,22 +81,23 @@ Sequence >> renderOn: view [
 
 { #category : #model }
 Sequence >> runFor: aDuration using: aSchedulerClass [
-	| targets scheduler |
-	targets := (allSeqBlocks collect: #target) asSet.
+	^self
+		runFor: aDuration
+		using: aSchedulerClass 
+		on: (SeqDataStream block: []).
+]
+
+{ #category : #model }
+Sequence >> runFor: aDuration using: aSchedulerClass on: aDataStream [
+	|  scheduler |
 	scheduler := aSchedulerClass new
-		head: seqHead;
-		topo: topoSorted;
-		targets: targets;
+		sequence: self;
+		input: (SeqFrameSource on: aDataStream);
 		yourself.
 	scheduler runFor: aDuration.
 	^(SeqTrace on: self)
 		numFrames: scheduler completedFrames;
 		yourself
-]
-
-{ #category : #'accessing - private' }
-Sequence >> seqTopo [
-	^topoSorted
 ]
 
 { #category : #'accessing - private' }
@@ -113,6 +114,19 @@ Sequence >> tails [
 Sequence >> targets [
 	^targets ifNil: [ 
 		targets := ((allSeqBlocks) collect: #target) asSet ]
+]
+
+{ #category : #model }
+Sequence >> tasksFor: aFrame [
+	| stream |
+	
+	"Unroll the execution flow to a graph for this specific frame.
+	TODO: So far it is topologically sorted list with no extra dependency information
+	TODO: It also can be optimized if blocks don't really depends on the run-time information"
+	stream := WriteStream on: OrderedCollection new.
+	self topoSorted do: [ :each |
+		(each tasks value: aFrame) timesRepeat: [ stream nextPut: each ]].
+	^stream contents
 ]
 
 { #category : #'accessing - private' }

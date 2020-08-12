@@ -20,14 +20,16 @@ SeqTrace class >> on: aSequence [
 
 { #category : #rendering }
 SeqTrace >> addLegend: view [ 
-	| lb |
+	| lb percent |
+	percent := [ :u | (100 * u) round: 2 ].
 	lb := RTLegendBuilder new.
 	lb
 		view: view;
 		gapSize: 0;
 		addText: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
-		addText: 'Utilization: ', ((100* self utilization) round: 2) asString, '%';
-		build.
+		addText: 'Utilization: ', (percent value: self utilization) asString, '%';
+		addText: '-- Per lane: ', (self allLanes collect: [:each | percent value: each utilization]) asArray printString, '%'.
+	lb	build.
 
 ]
 
@@ -134,7 +136,7 @@ SeqTrace >> throughput [
 	lastEvents := self allLanes
 		collect: [ :each |
 			each events reverse
-				detect: [ :ev | ev frame == (numFrames - 1) ]
+				detect: [ :ev | ev frame id == (numFrames - 1) ]
 				ifNone: [nil] ]
 		thenSelect: #isNotNil. "When there are multiple lanes per target, last even can be only in one of them"
 	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
@@ -143,19 +145,7 @@ SeqTrace >> throughput [
 
 { #category : #rendering }
 SeqTrace >> utilization [
-	^ (allLanes collect: [:each | self utilizationOf: each]) average asFloat
-]
-
-{ #category : #rendering }
-SeqTrace >> utilizationOf: aSeqLane [
-	| total running |
-	"Lane utilization is a ratio of time running to the overall execution time.
-	FIXME: the total time must be taken Sequence-wide!"
-	aSeqLane events isEmptyOrNil ifTrue: [^0.0 ]. 
-
-	total := aSeqLane events last endTime.
-	running := (aSeqLane events collect: #duration) sum.
-	^ (running / total) asFloat
+	^ (allLanes collect: #utilization) average asFloat
 ]
 
 { #category : #rendering }

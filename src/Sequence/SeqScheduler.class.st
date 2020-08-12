@@ -2,9 +2,8 @@ Class {
 	#name : #SeqScheduler,
 	#superclass : #Object,
 	#instVars : [
-		'head',
-		'targets',
-		'topo'
+		'sequence',
+		'input'
 	],
 	#category : #Sequence
 }
@@ -15,13 +14,13 @@ SeqScheduler >> completedFrames [
 ]
 
 { #category : #accessing }
-SeqScheduler >> head [
-	^ head
+SeqScheduler >> input [
+	^ input
 ]
 
-{ #category : #accessing }
-SeqScheduler >> head: anObject [
-	head := anObject
+{ #category : #accessors }
+SeqScheduler >> input: aSeqFrameSource [ 
+	input := aSeqFrameSource
 ]
 
 { #category : #accessing }
@@ -30,21 +29,11 @@ SeqScheduler >> runFor: aDuration [
 ]
 
 { #category : #accessing }
-SeqScheduler >> targets [
-	^ targets
+SeqScheduler >> sequence [
+	^ sequence
 ]
 
 { #category : #accessing }
-SeqScheduler >> targets: anObject [
-	targets := anObject
-]
-
-{ #category : #accessing }
-SeqScheduler >> topo [
-	^ topo
-]
-
-{ #category : #accessing }
-SeqScheduler >> topo: anObject [
-	topo := anObject
+SeqScheduler >> sequence: anObject [
+	sequence := anObject
 ]

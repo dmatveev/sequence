@@ -3,7 +3,8 @@ Class {
 	#superclass : #TestCase,
 	#instVars : [
 		'block',
-		'lane'
+		'lane',
+		'frame'
 	],
 	#category : #'Sequence-Tests'
 }
@@ -13,11 +14,12 @@ SeqLaneTest >> setUp [
 	super setUp.
 	block := 'Camera' asSeqBlock latency: 20 ms.
 	lane := SeqLane new.
+	frame := SeqFrame new id: 0; timestamp: 0 ms.
 ]
 
 { #category : #tests }
 SeqLaneTest >> testLock [
-	lane lock: block at: 0 seconds inContextOf: 0.
+	lane lock: block at: 0 seconds inContextOf: frame.
 	self assert: lane isLocked.
 ]
 

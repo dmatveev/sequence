@@ -39,6 +39,27 @@ SeqTraceTest >> testNumFrames [
 ]
 
 { #category : #running }
+SeqTraceTest >> testTasks [
+	| a b ae be |
+
+	a := 'A' asSeqBlock latency: 1 ms.
+	b := 'B' asSeqBlock latency: 1 ms; tasks: [ :frame | 2 ].
+	a >> b.
+
+	(Sequence startingWith: a)
+		runFor: 30 ms
+		using: SeqNaiveScheduler.
+
+	ae := a target execLanes first events.
+	be := b target execLanes first events.
+
+	"B must work 2x due to its #tasks config dependent on Stream contents.
+	Because of this, A with a naive scheduler A should have just 10 invokations, not 15"
+	self assert: ae size equals: 10.
+	self assert: be size equals: 20. 
+]
+
+{ #category : #running }
 SeqTraceTest >> testThroughput [
 	"Given two blocks with latency 20 & 5 ms, the throughput of
 	the system must be ~1000/(20+5) = 40 FPS (in case of naive execution)"
