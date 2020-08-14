@@ -5,7 +5,8 @@ Class {
 		'startTime',
 		'block',
 		'frame',
-		'lane'
+		'lane',
+		'duration'
 	],
 	#category : #Sequence
 }
@@ -31,12 +32,17 @@ SeqEvent >> block: anObject [
 
 { #category : #modelling }
 SeqEvent >> duration [
-	^block duration
+	^duration
+]
+
+{ #category : #accessing }
+SeqEvent >> duration: aDuration [
+	duration := aDuration
 ]
 
 { #category : #modelling }
 SeqEvent >> endTime [
-	^startTime + block duration
+	^startTime + self duration
 ]
 
 { #category : #accessing }

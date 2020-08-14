@@ -41,6 +41,8 @@ SeqLane >> release: aSeqBlock [
 	"TODO: this trio of time/block/frame is exactly an Event...
 	Probably I should use this object everywhere"
 	ev := SeqEvent on: currentLockTime with: currentSeqBlock inContextOf: currentFrame.
+	"TODO: One more thing: this is a duplication of information from #runFor"
+	ev duration: (aSeqBlock durationOn: currentFrame).
 	ev lane: self.
 	events add: ev.
 	currentSeqBlock := nil.

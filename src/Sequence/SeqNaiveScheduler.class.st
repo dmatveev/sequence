@@ -29,7 +29,7 @@ SeqNaiveScheduler >> runFor: aDuration [
 		token := thisBlock target tryLock: thisBlock at: elapsed inContextOf: frame.
 		token ifNil: [ self error: 'Should never happen, please check our resource allocation' ].
 		thisBlock target release: token.
-		elapsed := elapsed + thisBlock duration].
+		elapsed := elapsed + (thisBlock durationOn: frame)].
 	"If the execution time is over AND the stream is over, there was one more frame completed"
 	completedFrames := stream atEnd
 		ifTrue: [frame id + 1]

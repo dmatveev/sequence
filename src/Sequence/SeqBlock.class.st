@@ -3,14 +3,14 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'name',
-		'duration',
 		'consumers',
 		'producers',
 		'target',
 		'allocPolicy',
 		'lanes',
 		'taskBlock',
-		'jobBlock'
+		'jobBlock',
+		'latencyBlock'
 	],
 	#category : #Sequence
 }
@@ -68,8 +68,8 @@ SeqBlock >> doJob: aFrame [
 ]
 
 { #category : #accessors }
-SeqBlock >> duration [
-	^ duration
+SeqBlock >> durationOn: aFrame [
+	^ latencyBlock value: aFrame
 ]
 
 { #category : #accessors }
@@ -99,8 +99,10 @@ SeqBlock >> lanes: aNumber [
 ]
 
 { #category : #accessors }
-SeqBlock >> latency: aSeqDuration [ 
-	duration := aSeqDuration 
+SeqBlock >> latency: aSeqDurationOrBlock [
+	latencyBlock := aSeqDurationOrBlock isBlock
+		ifTrue: [ aSeqDurationOrBlock ]
+		ifFalse: [ [ :f | aSeqDurationOrBlock ] ]
 ]
 
 { #category : #accessors }

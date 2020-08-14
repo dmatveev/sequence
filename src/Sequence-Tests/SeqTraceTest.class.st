@@ -62,6 +62,30 @@ SeqTraceTest >> testJob [
 ]
 
 { #category : #running }
+SeqTraceTest >> testLatency [
+	| a t |
+	a := 'A' asSeqBlock latency: 1 ms.
+	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveScheduler.
+	self assert: (t allEvents size) equals: 5.
+]
+
+{ #category : #running }
+SeqTraceTest >> testLatencyBlock [
+	| a t |
+	a := 'A' asSeqBlock latency: [ :f | 1 ms ].
+	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveScheduler.
+	self assert: (t allEvents size) equals: 5.
+]
+
+{ #category : #running }
+SeqTraceTest >> testLatencyBlock2 [
+	| a t |
+	a := 'A' asSeqBlock latency: [ :f | (1 + f id) ms ].
+	t := (Sequence startingWith: a) runFor: 6 ms using: SeqNaiveScheduler.
+	self assert: (t allEvents size) equals: 3.
+]
+
+{ #category : #running }
 SeqTraceTest >> testNumFrames [
 	"Magic number 5*40 is 5 seconds with 40 FPS"
 	self assert: trace numFrames equals: (5*40)
