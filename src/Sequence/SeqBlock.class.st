@@ -9,7 +9,8 @@ Class {
 		'target',
 		'allocPolicy',
 		'lanes',
-		'taskBlock'
+		'taskBlock',
+		'jobBlock'
 	],
 	#category : #Sequence
 }
@@ -61,6 +62,11 @@ SeqBlock >> consumes: aSeqBlock [
 	^producers includes: aSeqBlock
 ]
 
+{ #category : #'accessing-testing' }
+SeqBlock >> doJob: aFrame [
+	jobBlock value: aFrame 
+]
+
 { #category : #accessors }
 SeqBlock >> duration [
 	^ duration
@@ -74,6 +80,12 @@ SeqBlock >> initialize [
 	allocPolicy := #sparse.
 	lanes := 1.
 	taskBlock := [ :frame | 1 ].
+	jobBlock := [ :frame | "Do nothing by default" ].
+]
+
+{ #category : #accessing }
+SeqBlock >> job: aBlockClosure [ 
+	jobBlock := aBlockClosure
 ]
 
 { #category : #accessors }

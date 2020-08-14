@@ -20,6 +20,21 @@ SeqTraceTest >> setUp [
 ]
 
 { #category : #running }
+SeqTraceTest >> testFrameDataUpdate [
+	| a frames |
+	frames := OrderedCollection new.
+
+	a := 'A' asSeqBlock latency: 1 ms.
+	a job: [ :f | f data add: f id ].
+	
+	(Sequence startingWith: a)
+		runFor: 5 ms
+		using: SeqNaiveScheduler
+		on: [ frames ].
+	self assert: frames equals: (0 to: 4) asOrderedCollection
+]
+
+{ #category : #running }
 SeqTraceTest >> testInvocations [
 	| ev1 ev2|
 	ev1 := cam target events.
@@ -30,6 +45,20 @@ SeqTraceTest >> testInvocations [
 	self assert: ev2 size equals: (5*40).
 	self assert: (ev2 allSatisfy: [:each | each seqBlock == proc]).
 	
+]
+
+{ #category : #running }
+SeqTraceTest >> testJob [
+	| a frames |
+	frames := OrderedCollection new.
+
+	a := 'A' asSeqBlock latency: 1 ms.
+	a job: [ :f | frames add: f id ].
+	
+	(Sequence startingWith: a)
+		runFor: 5 ms
+		using: SeqNaiveScheduler.
+	self assert: frames equals: (0 to: 4) asOrderedCollection
 ]
 
 { #category : #running }

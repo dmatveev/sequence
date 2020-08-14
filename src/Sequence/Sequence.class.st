@@ -128,6 +128,7 @@ Sequence >> tasksFor: aFrame [
 	TODO: It also can be optimized if blocks don't really depends on the run-time information"
 	stream := WriteStream on: OrderedCollection new.
 	self topoSorted do: [ :each |
+		each doJob: aFrame.
 		(each tasks value: aFrame) timesRepeat: [ stream nextPut: each ]].
 	^stream contents
 ]
