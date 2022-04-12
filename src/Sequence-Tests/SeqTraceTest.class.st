@@ -150,13 +150,13 @@ SeqTraceTest >> testThroughputBug [
 		b := 'B' asSeqBlock latency: 10 ms.
 		c := 'C' asSeqBlock latency: 15 ms.
 		a >> b >> c.
-		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler] value.
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler].
 	t2 := [ | t a b c |
 		t := SeqTarget new.
 		a := 'A' asSeqBlock latency: 5 ms; target: t.
 		b := 'B' asSeqBlock latency: 10 ms; target: t.
 		c := 'C' asSeqBlock latency: 15 ms; target: t.
 		a >> b >> c.
-		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler] value.
-	self assert: t1 throughput closeTo: t2 throughput
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler].
+	self assert: t1 value throughput closeTo: t2 value throughput
 ]

@@ -10,7 +10,8 @@ Class {
 		'lanes',
 		'taskBlock',
 		'jobBlock',
-		'latencyBlock'
+		'latencyBlock',
+		'isLive'
 	],
 	#category : #Sequence
 }
@@ -53,6 +54,13 @@ SeqBlock >> allocPolicy: aSymbol [
 ]
 
 { #category : #accessors }
+SeqBlock >> applyTo: aFrame with: aBlock [
+		self doJob: aFrame.
+		(self tasks value: aFrame) timesRepeat: aBlock.
+
+]
+
+{ #category : #accessors }
 SeqBlock >> consumers [
 	^ consumers
 ]
@@ -81,6 +89,12 @@ SeqBlock >> initialize [
 	lanes := 1.
 	taskBlock := [ :frame | 1 ].
 	jobBlock := [ :frame | "Do nothing by default" ].
+	isLive := false.
+]
+
+{ #category : #attributes }
+SeqBlock >> isLive [
+	^ isLive
 ]
 
 { #category : #accessing }
@@ -103,6 +117,11 @@ SeqBlock >> latency: aSeqDurationOrBlock [
 	latencyBlock := aSeqDurationOrBlock isBlock
 		ifTrue: [ aSeqDurationOrBlock ]
 		ifFalse: [ [ :f | aSeqDurationOrBlock ] ]
+]
+
+{ #category : #attributes }
+SeqBlock >> live [
+	isLive := true.
 ]
 
 { #category : #accessors }
@@ -150,4 +169,10 @@ SeqBlock >> tasks [
 { #category : #accessors }
 SeqBlock >> tasks: aBlockClosure [ 
 	taskBlock := aBlockClosure
+]
+
+{ #category : #simulation }
+SeqBlock >> tasksFor: aSeqFrame [ 
+	"Returns tasks to execute on the given block during simulation"
+	self shouldNotImplement 
 ]

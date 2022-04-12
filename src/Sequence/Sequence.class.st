@@ -49,6 +49,11 @@ Sequence >> gtInspectorPreviewIn: composite [
 		painting: [ :view | self renderOn: view ]
 ]
 
+{ #category : #attributes }
+Sequence >> hasLiveSource [
+	^topoSorted first isLive
+]
+
 { #category : #testing }
 Sequence >> includes: aSeqBlock [ 
 	^allSeqBlocks includes: aSeqBlock
@@ -147,9 +152,12 @@ Sequence >> tasksFor: aFrame [
 	TODO: So far it is topologically sorted list with no extra dependency information
 	TODO: It also can be optimized if blocks don't really depends on the run-time information"
 	stream := WriteStream on: OrderedCollection new.
-	self topoSorted do: [ :each |
-		each doJob: aFrame.
-		(each tasks value: aFrame) timesRepeat: [ stream nextPut: each ]].
+	
+	"FIXME: Some ugliness here, related to live source or not"
+	(self hasLiveSource
+		ifTrue: [ self topoSorted allButFirst ]
+		ifFalse: [ self topoSorted ]) do: [ :each |
+			each applyTo: aFrame with: [stream nextPut: each ] ].
 	^stream contents
 ]
 
@@ -183,6 +191,7 @@ Sequence >> traceDown [
 	self checkCycles.
 	self unroll.
 	self topoSort.
+	self validate.
 ]
 
 { #category : #private }
@@ -200,4 +209,14 @@ Sequence >> unroll [
 			this consumers ifEmpty: [ seqTail add: this ].
 			allSeqBlocks add: this ]]
 
+]
+
+{ #category : #private }
+Sequence >> validate [
+	"Check if there is only one live source in the pipeline"
+	| numLiveSources |
+	numLiveSources := (self topoSorted count: [:each | each isLive]).
+	numLiveSources > 1 ifTrue: [ SeqMultipleLiveSourcesFound signal ].
+	(numLiveSources = 1 and: [ self topoSorted first isLive not ])
+		ifTrue: [ SeqLiveSourceMustBeFirst signal ].
 ]

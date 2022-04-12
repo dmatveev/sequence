@@ -85,6 +85,19 @@ SequenceTest >> testBasicSceneTail [
 ]
 
 { #category : #tests }
+SequenceTest >> testHasLiveSource [
+	| cam vis  |
+	cam := SeqBlock named: 'Camera'.
+	vis := SeqBlock named: 'Visualization'.
+	cam >> vis.
+	self assert: (Sequence startingWith: cam) hasLiveSource not.
+	cam live.
+	self assert: (Sequence startingWith: cam) hasLiveSource.
+	
+
+]
+
+{ #category : #tests }
 SequenceTest >> testSceneRecursion [
 	| cam vis |
 	cam := SeqBlock named: 'Camera'.

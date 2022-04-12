@@ -30,6 +30,13 @@ SeqFrame >> id: anObject [
 ]
 
 { #category : #accessing }
+SeqFrame >> printOn: aStream [
+	aStream 
+		nextPutAll: 'SeqFrame:'.
+	id printOn: aStream
+]
+
+{ #category : #accessing }
 SeqFrame >> timestamp [
 	^ timestamp
 ]
