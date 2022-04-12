@@ -2,7 +2,9 @@ Class {
 	#name : #SeqNaiveScheduler,
 	#superclass : #SeqScheduler,
 	#instVars : [
-		'completedFrames'
+		'completedFrames',
+		'frame',
+		'elapsed'
 	],
 	#category : #Sequence
 }
@@ -13,29 +15,43 @@ SeqNaiveScheduler >> completedFrames [
 ]
 
 { #category : #accessing }
+SeqNaiveScheduler >> initialize [
+	super initialize.
+	frame := nil.
+	elapsed := 0 seconds.
+	completedFrames := 0.
+]
+
+{ #category : #accessing }
 SeqNaiveScheduler >> runDumbFor: aDuration [
-	| frame advance elapsed blockStream |
+	| blockStream nextFrameBlock |
 	"Naive execution is plain simple: just trigger blocks in the topological order
 	until the time ends. Resources always must be available (otherwise it is a misconfig)"
-	completedFrames := 0.
-	elapsed := 0 seconds.
-	advance := [	frame := self input next.
-					frame timestamp: elapsed.
-					blockStream := ReadStream on: (self sequence tasksFor: frame)].
-	"Initiate processing of the first frame"
-	advance value.
-	"Run the simulation loop. Note it combines both frames and blocks (per frame)"
-	[ elapsed < aDuration ] whileTrue: [ | thisBlock token | 
-		blockStream atEnd ifTrue: advance.
-		thisBlock := blockStream next.
-		token := thisBlock target tryLock: thisBlock at: elapsed inContextOf: frame.
-		token ifNil: [ self error: 'Should never happen, please check our resource allocation' ].
-		thisBlock target release: token.
-		elapsed := elapsed + (thisBlock durationOn: frame)].
-	"If the execution time is over AND the block stream is over, there was one more frame completed"
-	completedFrames := blockStream atEnd
-		ifTrue: [frame id + 1]
-		ifFalse: [frame id].
+		
+	blockStream := SeqEventStream on: sequence topoSorted.
+	nextFrameBlock := [ 
+		frame := self input next.
+		frame timestamp: elapsed.
+		blockStream updateFrame: frame].
+	blockStream
+		canStartTest: [ true ];
+		onStart: nextFrameBlock;
+		onComplete: [ completedFrames := completedFrames + 1 ].
+	self runEventStreams: {blockStream} for: aDuration.
+
+]
+
+{ #category : #private }
+SeqNaiveScheduler >> runEventStreams: anArray for: aDuration [
+	"This is the main simulation loop.
+	Should work uniformly for all cases"
+   [ elapsed < aDuration ] whileTrue: [	| blocksToPick nextTick |
+		anArray do: [ :each | each updateTimePoint: elapsed ].
+		blocksToPick := (anArray select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
+		nextTick := blocksToPick first nextTick.
+		(blocksToPick select: [ :each | each nextTick = nextTick ]) do: [ :each | each advance ].
+		self assert: nextTick >= elapsed.
+		elapsed := nextTick].
 ]
 
 { #category : #accessing }
@@ -47,12 +63,8 @@ SeqNaiveScheduler >> runFor: aDuration [
 
 { #category : #accessing }
 SeqNaiveScheduler >> runLiveFor: aDuration [
-	| frame pendingFrames elapsed streams blockStream liveStream liveBlock opBlocks |
-	"Naive execution is plain simple: just trigger blocks in the topological order
-	until the time ends. Resources always must be available (otherwise it is a misconfig)"
-	frame := nil.
-	completedFrames := 0.
-	elapsed := 0 seconds.
+	| pendingFrames streams blockStream liveStream liveBlock opBlocks |
+
 	pendingFrames := DoubleLinkedList new.
 	liveBlock := self sequence topoSorted first.
 	opBlocks := self sequence topoSorted allButFirst.
@@ -76,15 +88,8 @@ SeqNaiveScheduler >> runLiveFor: aDuration [
 				pendingFrames removeFirst ];
 			onComplete: [ completedFrames := completedFrames + 1 ].
 		streams add: blockStream].
-	
-   [ elapsed < aDuration ] whileTrue: [	| blocksToPick nextTick |
-		streams do: [ :each | each updateTimePoint: elapsed ].
-		blocksToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
-		nextTick := blocksToPick first nextTick.
-		(blocksToPick select: [ :each | each nextTick = nextTick ]) do: [ :each | each advance ].
-		self assert: nextTick >= elapsed.
-		elapsed := nextTick].
-	
+	self runEventStreams: streams for: aDuration.
+
 	"FIXME: Ugly kludge"
 	opBlocks ifEmpty: [ completedFrames := pendingFrames asArray size ].
 

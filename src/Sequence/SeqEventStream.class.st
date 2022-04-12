@@ -87,8 +87,8 @@ SeqEventStream >> handleAdvanceIdle [
 { #category : #private }
 SeqEventStream >> handleAdvanceStart [
 	startBlockCalled ifFalse: [
-		startBlock ifNotNil:
-		startBlock. startBlockCalled := true].
+		startBlock ifNotNil: startBlock.
+		startBlockCalled := true].
 	self enterNewBlock.
 	thisState := #exec
 ]

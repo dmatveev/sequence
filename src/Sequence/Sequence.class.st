@@ -41,14 +41,6 @@ Sequence >> checkCycles [
 	]
 ]
 
-{ #category : #private }
-Sequence >> gtInspectorPreviewIn: composite [
-	<gtInspectorPresentationOrder: 0>
-	^ composite roassal2
-		title: 'View';
-		painting: [ :view | self renderOn: view ]
-]
-
 { #category : #attributes }
 Sequence >> hasLiveSource [
 	^topoSorted first isLive
