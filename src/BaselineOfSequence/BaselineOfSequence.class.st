@@ -10,7 +10,7 @@ BaselineOfSequence >> baseline: spec [
 	spec
 		for: #common
 		do: [ "Dependencies"
-				spec baseline: 'Roassal2' with: [ spec repository: 'github://ObjectProfile/Roassal2' ].
+				spec baseline: 'Roassal3' with: [ spec repository: 'github://ObjectProfile/Roassal3' ].
 				spec package: 'Sequence'.
 				spec package: 'Sequence-Tests' with: [ spec requires: #('Sequence') ]]
 ]

@@ -22,16 +22,13 @@ SeqTrace class >> on: aSequence [
 SeqTrace >> addLegend: view [ 
 	| lb percent |
 	percent := [ :u | (100 * u) round: 2 ].
-	lb := RTLegendBuilder new.
+	lb := RSLegend new container: view.
 	lb
-		view: view;
-		gapSize: 0;
-		addText: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
-		addText: 'Utilization: ', (percent value: self utilization) asString, '%'.
-"		Not sure if this is the best option or not
-		addText: '-- ', (self allLanes collect: [:each | percent value: each utilization]) asArray printString, '%'."
+		beFixedWithTitle: 'Statistics'.
+	lb
+		text: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
+		text: 'Utilization: ', (percent value: self utilization) asString, '%'.
 	lb	build.
-
 ]
 
 { #category : #accessors }
@@ -63,21 +60,24 @@ SeqTrace >> colorFor: anEvent [
 	"Pick an event color from a palette given the
 	block's topological index"
 	index := sequence topoSorted indexOf: anEvent seqBlock.
-	^self colors at: index
+	^self colors scale: index
 ]
 
 { #category : #rendering }
 SeqTrace >> colors [
 	^colors ifNil: [
-		colors := (RTColorPalette qualitative colors: 8 scheme: 'Set2') ]
+		colors := (RSColorPalette qualitative accent8) ]
 ]
 
 { #category : #'GTInspector-Extensions' }
-SeqTrace >> gtInspectorPreviewIn: composite [
-	<gtInspectorPresentationOrder: 0>
-	^ composite roassal2
-		title: 'View';
-		painting: [ :view | self renderOn: view ]
+SeqTrace >> inspectorCanvas [
+	<inspectorPresentationOrder: 90 title: 'Canvas'>
+	| canvas |
+	canvas := RSCanvas new.
+	self renderOn: canvas.
+	^ SpRoassal3InspectorPresenter new
+		canvas: canvas;
+		yourself
 ]
 
 { #category : #rendering }
@@ -107,18 +107,17 @@ SeqTrace >> positionFor: anEvent [
 
 { #category : #rendering }
 SeqTrace >> renderOn: view [ 
-	| box es |
-	box := RTBox new
-		width: [:x | self widthFor: x];
+	| es |
+	es := self allEvents collect: [ :ev | RSBox new
+		width: (self widthFor: ev);
 		height: self laneHeight;
-		color: [ :x | self colorFor: x ];
+		color: (self colorFor: ev);
 		borderColor: Color veryDarkGray;
-		borderWidth: 0.25.
-	es := box elementsOn: self allEvents.
+		model: ev	].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
-	view @ RTDoubleScrollBar.
 	self addLegend: view.
+	view @ RSCanvasController.
 ]
 
 { #category : #accessors }
@@ -140,7 +139,7 @@ SeqTrace >> throughput [
 				detect: [ :ev | ev frame id == (numFrames - 1) ]
 				ifNone: [nil] ]
 		thenSelect: #isNotNil. "When there are multiple lanes per target, last even can be only in one of them"
-	lastTime := (lastEvents maxFor: [ :each | each endTime ]) endTime.
+	lastTime := (lastEvents maxValue: [ :each | each endTime ]).
 	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
 ]
 
