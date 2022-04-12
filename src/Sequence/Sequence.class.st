@@ -54,29 +54,49 @@ Sequence >> includes: aSeqBlock [
 	^allSeqBlocks includes: aSeqBlock
 ]
 
+{ #category : #'accessing - private' }
+Sequence >> inspectorCanvas [
+	<inspectorPresentationOrder: 90 title: 'Canvas'>
+	| canvas |
+	canvas := RSCanvas new.
+	self renderOn: canvas.
+	^ SpRoassal3InspectorPresenter new
+		canvas: canvas;
+		yourself
+]
+
 { #category : #rendering }
 Sequence >> renderOn: view [
-	| boxes labels eb |
-	boxes := (RTBox new color: Color white; borderWidth: 1; borderColor: Color gray)
-		elementsOn: allSeqBlocks.
-	labels := (RTLabel text: #name) elementsOn: allSeqBlocks.
-	boxes with: labels do:
-		[ :b :l | RTNest new on: b nest: (RTGroup with: l) ].
-
-	view addAll: boxes.
+	| labels eb |
+	labels := allSeqBlocks collect: [:seqBlock || label box |
+		label := RSLabel new 
+			text: seqBlock name;
+			color: Color black.
+		box := RSBox new
+			withBorder;
+			color: Color lightGreen;
+			extent: label extent + 10.
+		RSComposite new
+			draggable;
+			model: seqBlock;
+			shapes: (RSGroup with: box with: label);
+			yourself].
 	view addAll: labels.
 	
 	"Apply tree layout"
-	eb := RTEdgeBuilder new.
-	eb shape orthoHorizontalLine.
-	eb
-		view: view;
-		elements: boxes;
-		connectToAll: [ :seqBlock | seqBlock consumers ].
-	RTHorizontalDominanceTreeLayout new on: boxes.
-	
-	view @ RTDraggableView.
-	boxes @ RTDraggable.
+	eb := RSLineBuilder orthoHorizontal
+		markerEnd: (RSMarker new 
+			offset: 2;
+			shape: (RSShapeFactory triangle 
+				color: Color black;
+				size: 5;
+				yourself));
+		attachPoint: RSHorizontalAttachPoint new; 
+		canvas: view;
+		shapes: view nodes;
+		connectToAll: #consumers.
+	RSHorizontalDominanceTreeLayout new on: view nodes.
+	view @ RSCanvasController 
 ]
 
 { #category : #model }
