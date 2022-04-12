@@ -10,6 +10,13 @@ Class {
 	#category : #Sequence
 }
 
+{ #category : #rendering }
+SeqLane >> allLive [
+	^ events
+		ifEmpty: [ false ]
+		ifNotEmpty: [ events allSatisfy: [ :each | each seqBlock isLive ]]
+]
+
 { #category : #modelling }
 SeqLane >> events [
 	^events

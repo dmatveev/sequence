@@ -6,7 +6,9 @@ Class {
 		'allLanes',
 		'colors',
 		'sequences',
-		'counters'
+		'counters',
+		'laneYs',
+		'laneHeights'
 	],
 	#category : #Sequence
 }
@@ -68,8 +70,9 @@ SeqTrace >> colorFor: anEvent [
 	| baseColor |
 	baseColor := self colors scale: anEvent frame sequence.
 	
-	"Adjust color transparency pased on index"
-	^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor. 
+	"Adjust color transparency pased on index. Sources handled separately"
+	^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor.
+
 ]
 
 { #category : #rendering }
@@ -101,8 +104,25 @@ SeqTrace >> inspectorCanvas [
 ]
 
 { #category : #rendering }
-SeqTrace >> laneHeight [
-	^24
+SeqTrace >> laneHeight: aLane [
+	^aLane allLive ifTrue: [6] ifFalse: [24]
+]
+
+{ #category : #accessors }
+SeqTrace >> laneHeights [
+	^ laneHeights ifNil: [
+		laneHeights := self allLanes collect: [ :each | self laneHeight: each]]
+]
+
+{ #category : #accessors }
+SeqTrace >> laneYs [
+	^ laneYs ifNil: [ | w thisOffset |
+		thisOffset := 0.
+		w := WriteStream on: OrderedCollection new.
+		self laneHeights do: [ :h |
+				w nextPut: thisOffset.
+				thisOffset := thisOffset + h ].
+		laneYs := w contents	]
 ]
 
 { #category : #modelling }
@@ -121,11 +141,14 @@ SeqTrace >> numFrames: anObject [
 
 { #category : #rendering }
 SeqTrace >> positionFor: anEvent [
-	| x y |
-	x := (anEvent startTime asMicroseconds / 1000) asFloat.
-	y := self laneHeight * (self allLanes indexOf: anEvent lane).
+	| x y idx offsetFix |
+	idx := self allLanes indexOf: anEvent lane. "This may be a bottleneck"
+	x := anEvent startTime asMilliSeconds asFloat.
+	y := self laneYs at: idx.
+
 	"Those are the top-left coordinates, but Roassal seem to expect a central point.."
-	^(x @ y) translateBy: ((self widthFor: anEvent)/2) @ 0
+	offsetFix := ((self widthFor: anEvent)/2) @ ((self laneHeights at: idx)/2).
+	^(x @ y) translateBy: offsetFix.
 ]
 
 { #category : #rendering }
@@ -135,12 +158,14 @@ SeqTrace >> renderOn: view [
 		color: #veryDarkGray;
 		width: 0.5;
 		yourself.
-	es := self allEvents collect: [ :ev | RSBox new
-		width: (self widthFor: ev);
-		height: self laneHeight;
-		color: (self colorFor: ev);
-		border: b;
-		model: ev	].
+	es := self allEvents collect: [ :ev || idx |
+		idx := self allLanes indexOf: ev lane.
+		RSBox new
+			width: (self widthFor: ev);
+			height: (self laneHeights at: idx);
+			color: (self colorFor: ev);
+			border: b;
+			model: ev	].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
 	self addLegend: view.
