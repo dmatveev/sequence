@@ -46,8 +46,18 @@ SeqEventStream >> canStartTest: aBlockClosure [
 { #category : #attributes }
 SeqEventStream >> canWork [
 	"#canWork is defined by state. The precondition is only checked at #idle"
+
+	"In #idle state, we can work only if canStartBlock is available and gives true."
 	thisState = #idle ifTrue: [ ^canStartBlock ifNil: [ false ] ifNotNil: canStartBlock ].
-	^thisState = #ready or: (thisState = #exec)
+
+	"In #ready state, we can work if the current block can lock its target. Note there's no thisBlock yet"
+	thisState = #ready ifTrue: [ ^blockStream peek target canLock: blockStream peek ].
+	
+	"In #exec state, we can work if: thisBlock is already locked (leave it) OR it can lock (enter it)"
+	thisState = #exec ifTrue: [ ^thisToken isNotNil ].
+	
+	"...in all other cases."
+	^false.
 ]
 
 { #category : #private }
@@ -81,7 +91,9 @@ SeqEventStream >> handleAdvanceIdle [
 	self assert: thisState = #ready.
 	startBlockCalled := true. "Mark as called to avoid extra side effects in the next
 	state"
-	self advance.
+	"Take the next action immediately if possible. If it is not, it is ok to stay in the
+	#ready state."
+	self canWork ifTrue: [self advance].
 ]
 
 { #category : #private }
@@ -165,7 +177,10 @@ SeqEventStream >> updateFrame: aSeqFrame [
 
 { #category : #attributes }
 SeqEventStream >> updateTimePoint: aTimePoint [
+	"Self-check. A time point shouldn't be updated for the stream until the #nextEvent happen.
+	Applies only to #exec state."
+	thisState = #exec ifTrue: [ self assert: nextEventTime >= aTimePoint ].
 	thisTimePoint := aTimePoint.
-	thisState = #idle ifTrue: [ nextEventTime := thisTimePoint. ]
+	(thisState = #idle or: (thisState = #ready)) ifTrue: [ nextEventTime := thisTimePoint. ]
 
 ]

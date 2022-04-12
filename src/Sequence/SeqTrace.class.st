@@ -32,9 +32,10 @@ SeqTrace >> addLegend: view [
 	lb := RSLegend new container: view.
 	lb
 		beFixedWithTitle: 'Statistics'.
-	lb
+		"FIXME: TEMP"
+"	lb
 		text: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
-		text: 'Utilization: ', (percent value: self utilization) asString, '%'.
+		text: 'Utilization: ', (percent value: self utilization) asString, '%'."
 	lb	build.
 ]
 
@@ -129,7 +130,7 @@ SeqTrace >> renderOn: view [
 	es := self allEvents collect: [ :ev | RSBox new
 		width: (self widthFor: ev);
 		height: self laneHeight;
-		color: (self colorFor: ev of: sequences first); "FIXME: temporary"
+		color: Color palePeach; " (self colorFor: ev of: sequences first); ""FIXME: temporary"
 		borderColor: Color veryDarkGray;
 		model: ev	].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].

@@ -106,13 +106,10 @@ Sequence >> runFor: aDuration using: aSchedulerClass [
 
 { #category : #model }
 Sequence >> runFor: aDuration using: aSchedulerClass on: aDataStreamOrBlock [
-	|  scheduler stream |
-	stream := aDataStreamOrBlock isBlock
-		ifTrue: [ SeqDataStream block: aDataStreamOrBlock ]
-		ifFalse: [ aDataStreamOrBlock ].
+	|  scheduler |
 	scheduler := aSchedulerClass new
 		sequence: self;
-		input: (SeqFrameSource on: stream);
+		input: (SeqFrameSource using: aDataStreamOrBlock);
 		yourself.
 	scheduler runFor: aDuration.
 	^(SeqTrace on: self)

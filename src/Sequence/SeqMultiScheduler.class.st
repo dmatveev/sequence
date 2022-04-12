@@ -28,6 +28,7 @@ SeqMultiScheduler >> completedFrames: aSequence [
 SeqMultiScheduler >> initialize [
 	super initialize.
 	completedFrames := Dictionary new.
+	elapsed := 0 ms.
 ]
 
 { #category : #accessing }

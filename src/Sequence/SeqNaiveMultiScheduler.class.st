@@ -14,7 +14,7 @@ SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 	"So far only handle the live case"
 	self assert: aSequence topoSorted first isLive.
 	completedFrames at: aSequence put: 0.
-	inputStream := SeqFrameSource on: anInputStreamBlock.
+	inputStream := SeqFrameSource using: anInputStreamBlock.
 
 	pendingFrames := DoubleLinkedList new.
 	liveBlock := aSequence topoSorted first.
@@ -49,18 +49,21 @@ SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 { #category : #accessing }
 SeqNaiveMultiScheduler >> initialize [
 	super initialize.
+	streams := OrderedCollection new.
 ]
 
 { #category : #accessing }
 SeqNaiveMultiScheduler >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
-	THIS is a total copy of the SeqNaiveSchedulerMethod. Should be unified among them somehow."
+	THIS is a total copy of the SeqNaiveSchedulerMethod. Should be unified among them somehow.
+	The only change: it advances only one block at a time"
    [ elapsed < aDuration ] whileTrue: [	| blocksToPick nextTick |
 		streams do: [ :each | each updateTimePoint: elapsed ].
 		blocksToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
 		nextTick := blocksToPick first nextTick.
-		(blocksToPick select: [ :each | each nextTick = nextTick ]) do: [ :each | each advance ].
+		"(blocksToPick select: [ :each | each nextTick = nextTick ]) do: [ :each | each advance ]."
 		self assert: nextTick >= elapsed.
+		blocksToPick first advance.
 		elapsed := nextTick].
 ]

@@ -15,6 +15,15 @@ SeqFrameSource class >> on: aSeqDataStream [
 		yourself
 ]
 
+{ #category : #'instance creation' }
+SeqFrameSource class >> using: aDataStreamOrBlock [
+	| stream |
+	stream := aDataStreamOrBlock isBlock
+		ifTrue: [ SeqDataStream block: aDataStreamOrBlock ]
+		ifFalse: [ aDataStreamOrBlock ].
+	^self on: stream
+]
+
 { #category : #stream }
 SeqFrameSource >> initialize [
 	super initialize.

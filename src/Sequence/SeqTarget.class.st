@@ -10,6 +10,11 @@ Class {
 }
 
 { #category : #modelling }
+SeqTarget >> canLock: aSeqBlock [
+	^(self lanesToLock: aSeqBlock) isNotEmpty
+]
+
+{ #category : #modelling }
 SeqTarget >> events [
 	"Return events from the 1st lane by default"
 	^execLanes first events
@@ -42,6 +47,11 @@ SeqTarget >> lanes: aNumber [
 	execLanes := (1 to: aNumber) collect: [:i | SeqLane new]
 ]
 
+{ #category : #modelling }
+SeqTarget >> lanesToLock: aSeqBlock [
+	^(SeqAllocPolicy at: aSeqBlock allocPolicy) selectLanes: execLanes for: aSeqBlock lanes.
+]
+
 { #category : #scheduling }
 SeqTarget >> release: aToken [
 	(lockedLanes at: aToken) do: [ :each | each release: aToken seqBlock ].
@@ -52,7 +62,7 @@ SeqTarget >> release: aToken [
 SeqTarget >> tryLock: aSeqBlock at: aDuration inContextOf: aFrame [
 	| toLock token |
 	"Check if this resource has room to execute this block..."
-	toLock := (SeqAllocPolicy at: aSeqBlock allocPolicy) selectLanes: execLanes for: aSeqBlock lanes.
+	toLock := self lanesToLock: aSeqBlock.
 	toLock ifEmpty: [
 		"Policy couldn't allocate anything"
 		^nil ].
