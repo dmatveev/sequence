@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'id',
 		'timestamp',
-		'data'
+		'data',
+		'sequence'
 	],
 	#category : #Sequence
 }
@@ -34,6 +35,16 @@ SeqFrame >> printOn: aStream [
 	aStream 
 		nextPutAll: 'SeqFrame:'.
 	id printOn: aStream
+]
+
+{ #category : #attributes }
+SeqFrame >> sequence [
+	^ sequence
+]
+
+{ #category : #accessing }
+SeqFrame >> sequence: anObject [
+	sequence := anObject
 ]
 
 { #category : #accessing }

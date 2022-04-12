@@ -6,7 +6,7 @@ Class {
 		'allLanes',
 		'colors',
 		'sequences',
-		'numFramesDict'
+		'counters'
 	],
 	#category : #Sequence
 }
@@ -19,9 +19,9 @@ SeqTrace class >> on: aSequence [
 ]
 
 { #category : #accessors }
-SeqTrace >> add: aSequence over: aNumberOfCompletedFrames [
+SeqTrace >> add: aSequence over: sequenceCounters [
 	sequences add: aSequence.
-	numFramesDict at: aSequence put: aNumberOfCompletedFrames.
+	counters at: aSequence put: sequenceCounters.
 	targets addAll: aSequence targets.
 ]
 
@@ -32,10 +32,11 @@ SeqTrace >> addLegend: view [
 	lb := RSLegend new container: view.
 	lb
 		beFixedWithTitle: 'Statistics'.
-		"FIXME: TEMP"
-"	lb
-		text: 'Throughput: ', (self throughput round: 2) asString, ' FPS';
-		text: 'Utilization: ', (percent value: self utilization) asString, '%'."
+	sequences do: [ :each |
+		| cntrs |
+		cntrs := counters at: each.
+		lb text: (' ' join: {each name. 'average latency:'. (cntrs at: #latencyAverage) asMilliSeconds. 'ms'}).
+		lb text: (' ' join: {each name. 'median latency:'.  (cntrs at: #latencyMedian)  asMilliSeconds. 'ms'})].
 	lb	build.
 ]
 
@@ -63,25 +64,28 @@ SeqTrace >> allLanes [
 ]
 
 { #category : #rendering }
-SeqTrace >> colorFor: anEvent of: aSequence [
-	| index |
-	"Pick an event color from a palette given the
-	block's topological index"
-	index := aSequence topoSorted indexOf: anEvent seqBlock.
-	^self colors scale: index
+SeqTrace >> colorFor: anEvent [
+	| baseColor |
+	baseColor := self colors scale: anEvent frame sequence.
+	
+	"Adjust color transparency pased on index"
+	^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor. 
 ]
 
 { #category : #rendering }
 SeqTrace >> colors [
-	^colors ifNil: [
-		colors := (RSColorPalette qualitative accent8) ]
+	^colors ifNil: [colors := RSColorPalette qualitative set312.
+		"This is a trick to ensure the scale for every individual pipeline based on its index.
+		(make it more deterministic)"
+		sequences do: [ :each | colors scale: each ].
+		colors]
 ]
 
 { #category : #initialization }
 SeqTrace >> initialize [
 	super initialize.
 	sequences := OrderedCollection new.
-	numFramesDict := Dictionary new.
+	counters := Dictionary new.
 	targets := Set new.
 ]
 
@@ -98,21 +102,21 @@ SeqTrace >> inspectorCanvas [
 
 { #category : #rendering }
 SeqTrace >> laneHeight [
-	^32
+	^24
 ]
 
 { #category : #modelling }
 SeqTrace >> numFrames [
 	"Aux method. Should be called for Mono case only"
 	self assert: sequences size = 1.
-	^numFramesDict at: sequences first
+	^counters at: sequences first
 ]
 
 { #category : #accessing }
 SeqTrace >> numFrames: anObject [
 	"Aux method. Works only for the mono case"
 	self assert: sequences size = 1.
-	numFramesDict at: sequences first put: anObject.
+	counters at: sequences first put: anObject.
 ]
 
 { #category : #rendering }
@@ -126,12 +130,16 @@ SeqTrace >> positionFor: anEvent [
 
 { #category : #rendering }
 SeqTrace >> renderOn: view [ 
-	| es |
+	| es b |
+	b := RSBorder new
+		color: #veryDarkGray;
+		width: 0.5;
+		yourself.
 	es := self allEvents collect: [ :ev | RSBox new
 		width: (self widthFor: ev);
 		height: self laneHeight;
-		color: Color palePeach; " (self colorFor: ev of: sequences first); ""FIXME: temporary"
-		borderColor: Color veryDarkGray;
+		color: (self colorFor: ev);
+		border: b;
 		model: ev	].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.

@@ -10,7 +10,8 @@ Class {
 		'allSeqBlocks',
 		'seqTail',
 		'topoSorted',
-		'targets'
+		'targets',
+		'userDefinedName'
 	],
 	#category : #Sequence
 }
@@ -60,6 +61,16 @@ Sequence >> inspectorCanvas [
 	^ SpRoassal3InspectorPresenter new
 		canvas: canvas;
 		yourself
+]
+
+{ #category : #attributes }
+Sequence >> name [
+	^userDefinedName ifNil: ['a Sequence ', self hash printStringHex]
+]
+
+{ #category : #attributes }
+Sequence >> name: aString [
+	userDefinedName := aString
 ]
 
 { #category : #rendering }

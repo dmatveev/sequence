@@ -7,6 +7,17 @@ Class {
 	#category : #Sequence
 }
 
+{ #category : #'as yet unclassified' }
+SeqNaiveMultiScheduler class >> run: aCollectionOfSequences for: aDuration [
+	| sched trace |
+	sched := self new.
+	aCollectionOfSequences do: [ :each | sched add: each ].
+	sched runFor: aDuration.
+	trace := SeqTrace new.
+	aCollectionOfSequences do: [ :each | trace add: each over: (sched counters: each) ].
+	^trace
+]
+
 { #category : #accessing }
 SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 	| frame inputStream pendingFrames blockStream liveStream liveBlock opBlocks |
@@ -14,7 +25,7 @@ SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 	"So far only handle the live case"
 	self assert: aSequence topoSorted first isLive.
 	completedFrames at: aSequence put: 0.
-	inputStream := SeqFrameSource using: anInputStreamBlock.
+	inputStream := SeqFrameSource using: anInputStreamBlock for: aSequence.
 
 	pendingFrames := DoubleLinkedList new.
 	liveBlock := aSequence topoSorted first.
@@ -40,10 +51,11 @@ SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 		canStartTest: [ pendingFrames head isNotNil ];
 		onStart: [
 			blockStream updateFrame: pendingFrames first.
-			pendingFrames removeFirst ];
-		onComplete: [ self registerCompleted: aSequence ].
+			pendingFrames removeFirst.
+			self registerStarted: aSequence at: blockStream currentTime ];
+		onComplete: [ self registerCompleted: aSequence at: blockStream currentTime ].
 	streams add: blockStream.
-
+	self register: aSequence.
 ]
 
 { #category : #accessing }

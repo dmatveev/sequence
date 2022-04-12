@@ -60,6 +60,11 @@ SeqEventStream >> canWork [
 	^false.
 ]
 
+{ #category : #attributes }
+SeqEventStream >> currentTime [
+	^thisTimePoint
+]
+
 { #category : #private }
 SeqEventStream >> enterNewBlock [
 	thisBlock := blockStream peek.
