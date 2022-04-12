@@ -16,7 +16,7 @@ SeqTraceTest >> setUp [
 	cam := 'Camera' asSeqBlock latency: 20 ms.
 	proc := 'Process' asSeqBlock latency: 5 ms.
 	cam >> proc.
-	trace := (Sequence startingWith: cam) runFor: 5 seconds using: SeqNaiveScheduler.
+	trace := (Sequence startingWith: cam) runFor: 5 seconds using: SeqNaiveExecutor.
 ]
 
 { #category : #running }
@@ -29,7 +29,7 @@ SeqTraceTest >> testFrameDataUpdate [
 	
 	(Sequence startingWith: a)
 		runFor: 5 ms
-		using: SeqNaiveScheduler
+		using: SeqNaiveExecutor
 		on: [ frames ].
 	self assert: frames equals: (0 to: 4) asOrderedCollection
 ]
@@ -57,7 +57,7 @@ SeqTraceTest >> testJob [
 	
 	(Sequence startingWith: a)
 		runFor: 5 ms
-		using: SeqNaiveScheduler.
+		using: SeqNaiveExecutor.
 	self assert: frames equals: (0 to: 4) asOrderedCollection
 ]
 
@@ -65,7 +65,7 @@ SeqTraceTest >> testJob [
 SeqTraceTest >> testLatency [
 	| a t |
 	a := 'A' asSeqBlock latency: 1 ms.
-	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveScheduler.
+	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveExecutor.
 	self assert: (t allEvents size) equals: 5.
 ]
 
@@ -73,7 +73,7 @@ SeqTraceTest >> testLatency [
 SeqTraceTest >> testLatencyBlock [
 	| a t |
 	a := 'A' asSeqBlock latency: [ :f | 1 ms ].
-	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveScheduler.
+	t := (Sequence startingWith: a) runFor: 5 ms using: SeqNaiveExecutor.
 	self assert: (t allEvents size) equals: 5.
 ]
 
@@ -81,7 +81,7 @@ SeqTraceTest >> testLatencyBlock [
 SeqTraceTest >> testLatencyBlock2 [
 	| a t |
 	a := 'A' asSeqBlock latency: [ :f | (1 + f id) ms ].
-	t := (Sequence startingWith: a) runFor: 6 ms using: SeqNaiveScheduler.
+	t := (Sequence startingWith: a) runFor: 6 ms using: SeqNaiveExecutor.
 	self assert: (t allEvents size) equals: 3.
 ]
 
@@ -101,7 +101,7 @@ SeqTraceTest >> testTasks [
 
 	(Sequence startingWith: a)
 		runFor: 30 ms
-		using: SeqNaiveScheduler.
+		using: SeqNaiveExecutor.
 
 	ae := a target execLanes first events.
 	be := b target execLanes first events.
@@ -127,7 +127,7 @@ SeqTraceTest >> testTasksStream [
 	"Run the simulation"
 	t := (Sequence startingWith: a)
 		runFor: 33 ms
-		using: SeqNaiveScheduler
+		using: SeqNaiveExecutor
 		on: [ cnt := (cnt + 1) % 4. ].
 		
 	self assert: t numFrames equals: 8. "Not 11, due to variadic number of B tasks"
@@ -150,13 +150,13 @@ SeqTraceTest >> testThroughputBug [
 		b := 'B' asSeqBlock latency: 10 ms.
 		c := 'C' asSeqBlock latency: 15 ms.
 		a >> b >> c.
-		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler].
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveExecutor].
 	t2 := [ | t a b c |
 		t := SeqTarget new.
 		a := 'A' asSeqBlock latency: 5 ms; target: t.
 		b := 'B' asSeqBlock latency: 10 ms; target: t.
 		c := 'C' asSeqBlock latency: 15 ms; target: t.
 		a >> b >> c.
-		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveScheduler].
+		(Sequence startingWith: a) runFor: 1 second using: SeqNaiveExecutor].
 	self assert: t1 value throughput closeTo: t2 value throughput
 ]

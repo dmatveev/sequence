@@ -1,6 +1,6 @@
 Class {
-	#name : #SeqNaiveScheduler,
-	#superclass : #SeqMonoScheduler,
+	#name : #SeqNaiveExecutor,
+	#superclass : #SeqMonoExecutor,
 	#instVars : [
 		'completedFrames',
 		'frame',
@@ -10,19 +10,19 @@ Class {
 }
 
 { #category : #accessing }
-SeqNaiveScheduler >> completedFrames [
+SeqNaiveExecutor >> completedFrames [
 	^completedFrames
 ]
 
 { #category : #accessing }
-SeqNaiveScheduler >> initialize [
+SeqNaiveExecutor >> initialize [
 	super initialize.
 	elapsed := 0 seconds.
 	completedFrames := 0.
 ]
 
 { #category : #accessing }
-SeqNaiveScheduler >> runDumbFor: aDuration [
+SeqNaiveExecutor >> runDumbFor: aDuration [
 	| blockStream nextFrameBlock |
 	"Naive execution is plain simple: just trigger blocks in the topological order
 	until the time ends. Resources always must be available (otherwise it is a misconfig)"
@@ -41,7 +41,7 @@ SeqNaiveScheduler >> runDumbFor: aDuration [
 ]
 
 { #category : #private }
-SeqNaiveScheduler >> runEventStreams: anArray for: aDuration [
+SeqNaiveExecutor >> runEventStreams: anArray for: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases"
    [ elapsed < aDuration ] whileTrue: [	| blocksToPick nextTick |
@@ -54,14 +54,14 @@ SeqNaiveScheduler >> runEventStreams: anArray for: aDuration [
 ]
 
 { #category : #accessing }
-SeqNaiveScheduler >> runFor: aDuration [
+SeqNaiveExecutor >> runFor: aDuration [
 	self sequence hasLiveSource
 		ifTrue: [ self runLiveFor: aDuration ]
 		ifFalse: [ self runDumbFor: aDuration ]
 ]
 
 { #category : #accessing }
-SeqNaiveScheduler >> runLiveFor: aDuration [
+SeqNaiveExecutor >> runLiveFor: aDuration [
 	| pendingFrames streams blockStream liveStream liveBlock opBlocks |
 
 	pendingFrames := DoubleLinkedList new.

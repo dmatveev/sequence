@@ -1,10 +1,10 @@
 Class {
-	#name : #SeqScheduler,
+	#name : #SeqExecutor,
 	#superclass : #Object,
 	#category : #Sequence
 }
 
 { #category : #accessing }
-SeqScheduler >> runFor: aDuration [
+SeqExecutor >> runFor: aDuration [
 	self subclassResponsibility 
 ]

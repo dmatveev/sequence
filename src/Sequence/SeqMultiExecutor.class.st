@@ -1,6 +1,6 @@
 Class {
-	#name : #SeqMultiScheduler,
-	#superclass : #SeqScheduler,
+	#name : #SeqMultiExecutor,
+	#superclass : #SeqExecutor,
 	#instVars : [
 		'elapsed',
 		'completedFrames',
@@ -11,18 +11,18 @@ Class {
 }
 
 { #category : #accessing }
-SeqMultiScheduler >> add: aSequence [
+SeqMultiExecutor >> add: aSequence [
 	self add: aSequence with: [ ]
 
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> add: aSequence with: anInputStreamBlock [
+SeqMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	self subclassResponsibility
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> counters: aSequence [
+SeqMultiExecutor >> counters: aSequence [
 	"Generate execution counters based on what we've registered"
 	| counters frames |
 	counters := Dictionary new.
@@ -36,7 +36,7 @@ SeqMultiScheduler >> counters: aSequence [
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> initialize [
+SeqMultiExecutor >> initialize [
 	super initialize.
 	completedFrames := Dictionary new.
 	latencies := Dictionary new.
@@ -45,12 +45,12 @@ SeqMultiScheduler >> initialize [
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> register: aSequence [
+SeqMultiExecutor >> register: aSequence [
 	latencies at: aSequence put: OrderedCollection new.
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> registerCompleted: aSequence at: aTimePoint [
+SeqMultiExecutor >> registerCompleted: aSequence at: aTimePoint [
 	| startPoint |
 	completedFrames at: aSequence update: [:n | n + 1].
 	startPoint := starts removeKey: aSequence.
@@ -58,6 +58,6 @@ SeqMultiScheduler >> registerCompleted: aSequence at: aTimePoint [
 ]
 
 { #category : #accessing }
-SeqMultiScheduler >> registerStarted: aSequence at: aTimePoint [
+SeqMultiExecutor >> registerStarted: aSequence at: aTimePoint [
 	starts at: aSequence put: aTimePoint.
 ]

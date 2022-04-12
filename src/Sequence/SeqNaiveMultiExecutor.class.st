@@ -1,6 +1,6 @@
 Class {
-	#name : #SeqNaiveMultiScheduler,
-	#superclass : #SeqMultiScheduler,
+	#name : #SeqNaiveMultiExecutor,
+	#superclass : #SeqMultiExecutor,
 	#instVars : [
 		'streams'
 	],
@@ -8,7 +8,7 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-SeqNaiveMultiScheduler class >> run: aCollectionOfSequences for: aDuration [
+SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
 	| sched trace |
 	sched := self new.
 	aCollectionOfSequences do: [ :each | sched add: each ].
@@ -19,7 +19,7 @@ SeqNaiveMultiScheduler class >> run: aCollectionOfSequences for: aDuration [
 ]
 
 { #category : #accessing }
-SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
+SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	| frame inputStream pendingFrames blockStream liveStream liveBlock opBlocks |
 
 	"So far only handle the live case"
@@ -59,13 +59,13 @@ SeqNaiveMultiScheduler >> add: aSequence with: anInputStreamBlock [
 ]
 
 { #category : #accessing }
-SeqNaiveMultiScheduler >> initialize [
+SeqNaiveMultiExecutor >> initialize [
 	super initialize.
 	streams := OrderedCollection new.
 ]
 
 { #category : #accessing }
-SeqNaiveMultiScheduler >> runFor: aDuration [
+SeqNaiveMultiExecutor >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
 	THIS is a total copy of the SeqNaiveSchedulerMethod. Should be unified among them somehow.

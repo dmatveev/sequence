@@ -15,7 +15,7 @@ SeqLiveTraceTest >> setUp [
 	cam := 'Camera' asSeqBlock latency: 33 ms; live.
 	proc := 'Process' asSeqBlock latency: 2 ms.
 	cam >> proc.
-	trace := (Sequence startingWith: cam) runFor: 50 ms using: SeqNaiveScheduler.
+	trace := (Sequence startingWith: cam) runFor: 50 ms using: SeqNaiveExecutor.
 ]
 
 { #category : #initialization }

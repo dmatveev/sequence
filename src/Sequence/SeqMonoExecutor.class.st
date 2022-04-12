@@ -1,6 +1,6 @@
 Class {
-	#name : #SeqMonoScheduler,
-	#superclass : #SeqScheduler,
+	#name : #SeqMonoExecutor,
+	#superclass : #SeqExecutor,
 	#instVars : [
 		'input',
 		'sequence'
@@ -9,26 +9,26 @@ Class {
 }
 
 { #category : #accessing }
-SeqMonoScheduler >> completedFrames [
+SeqMonoExecutor >> completedFrames [
 	self subclassResponsibility 
 ]
 
 { #category : #accessing }
-SeqMonoScheduler >> input [
+SeqMonoExecutor >> input [
 	^ input
 ]
 
 { #category : #accessors }
-SeqMonoScheduler >> input: aSeqFrameSource [ 
+SeqMonoExecutor >> input: aSeqFrameSource [ 
 	input := aSeqFrameSource
 ]
 
 { #category : #accessing }
-SeqMonoScheduler >> sequence [
+SeqMonoExecutor >> sequence [
 	^ sequence
 ]
 
 { #category : #accessing }
-SeqMonoScheduler >> sequence: anObject [
+SeqMonoExecutor >> sequence: anObject [
 	sequence := anObject
 ]

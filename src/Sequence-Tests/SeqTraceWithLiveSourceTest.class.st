@@ -13,7 +13,7 @@ Class {
 SeqTraceWithLiveSourceTest >> runTraceForCamera: cameraLatency andProcessing: processingLatency for: aDuration [
 	cam latency: cameraLatency.
 	proc latency: processingLatency.
-	trace := (Sequence startingWith: cam) runFor: aDuration using: SeqNaiveScheduler 
+	trace := (Sequence startingWith: cam) runFor: aDuration using: SeqNaiveExecutor 
 ]
 
 { #category : #running }
