@@ -1,6 +1,6 @@
 Class {
 	#name : #SeqNaiveScheduler,
-	#superclass : #SeqScheduler,
+	#superclass : #SeqMonoScheduler,
 	#instVars : [
 		'completedFrames',
 		'frame',
@@ -17,7 +17,6 @@ SeqNaiveScheduler >> completedFrames [
 { #category : #accessing }
 SeqNaiveScheduler >> initialize [
 	super initialize.
-	frame := nil.
 	elapsed := 0 seconds.
 	completedFrames := 0.
 ]

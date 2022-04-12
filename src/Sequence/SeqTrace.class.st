@@ -3,10 +3,10 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'targets',
-		'numFrames',
 		'allLanes',
 		'colors',
-		'sequence'
+		'sequences',
+		'numFramesDict'
 	],
 	#category : #Sequence
 }
@@ -16,6 +16,13 @@ SeqTrace class >> on: aSequence [
 	^self new
 		sequence: aSequence;
 		yourself
+]
+
+{ #category : #accessors }
+SeqTrace >> add: aSequence over: aNumberOfCompletedFrames [
+	sequences add: aSequence.
+	numFramesDict at: aSequence put: aNumberOfCompletedFrames.
+	targets addAll: aSequence targets.
 ]
 
 { #category : #rendering }
@@ -45,7 +52,7 @@ SeqTrace >> allLanes [
 	"This object needs to be cached to preserve the order in-between calls"
 	^allLanes ifNil: [ | knownTargets topoTargets w |
 		knownTargets := Set new.
-		topoTargets := sequence topoSorted collect: #target.
+		topoTargets := (sequences collect: [:each | each topoSorted collect: #target]) flattened.
 		w := WriteStream on: OrderedCollection new.
 		topoTargets
 			reject: [:each | knownTargets includes: each]
@@ -55,11 +62,11 @@ SeqTrace >> allLanes [
 ]
 
 { #category : #rendering }
-SeqTrace >> colorFor: anEvent [
+SeqTrace >> colorFor: anEvent of: aSequence [
 	| index |
 	"Pick an event color from a palette given the
 	block's topological index"
-	index := sequence topoSorted indexOf: anEvent seqBlock.
+	index := aSequence topoSorted indexOf: anEvent seqBlock.
 	^self colors scale: index
 ]
 
@@ -67,6 +74,14 @@ SeqTrace >> colorFor: anEvent [
 SeqTrace >> colors [
 	^colors ifNil: [
 		colors := (RSColorPalette qualitative accent8) ]
+]
+
+{ #category : #initialization }
+SeqTrace >> initialize [
+	super initialize.
+	sequences := OrderedCollection new.
+	numFramesDict := Dictionary new.
+	targets := Set new.
 ]
 
 { #category : #'GTInspector-Extensions' }
@@ -87,13 +102,16 @@ SeqTrace >> laneHeight [
 
 { #category : #modelling }
 SeqTrace >> numFrames [
-	"TODO: Can this be calculated?"
-	^numFrames
+	"Aux method. Should be called for Mono case only"
+	self assert: sequences size = 1.
+	^numFramesDict at: sequences first
 ]
 
 { #category : #accessing }
 SeqTrace >> numFrames: anObject [
-	numFrames := anObject
+	"Aux method. Works only for the mono case"
+	self assert: sequences size = 1.
+	numFramesDict at: sequences first put: anObject.
 ]
 
 { #category : #rendering }
@@ -111,7 +129,7 @@ SeqTrace >> renderOn: view [
 	es := self allEvents collect: [ :ev | RSBox new
 		width: (self widthFor: ev);
 		height: self laneHeight;
-		color: (self colorFor: ev);
+		color: (self colorFor: ev of: sequences first); "FIXME: temporary"
 		borderColor: Color veryDarkGray;
 		model: ev	].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
@@ -122,13 +140,15 @@ SeqTrace >> renderOn: view [
 
 { #category : #accessors }
 SeqTrace >> sequence: aSequence [
-	sequence := aSequence.
-	targets := sequence targets.
+	"A legacy/compatibility method"
+	sequences := Array with: aSequence.
+	targets := aSequence targets asSet.
 	allLanes := nil. "Invalidate the cache"
 ]
 
 { #category : #modelling }
 SeqTrace >> throughput [
+	"Aux method."
 	"Estimate throughput based on number of completed frames & time spent:
 	walk though all target's execution lanes, pick the last completed time,
 	then do some simple math..."
@@ -136,11 +156,11 @@ SeqTrace >> throughput [
 	lastEvents := self allLanes
 		collect: [ :each |
 			each events reverse
-				detect: [ :ev | ev frame id == (numFrames - 1) ]
+				detect: [ :ev | ev frame id == (self numFrames - 1) ]
 				ifNone: [nil] ]
 		thenSelect: #isNotNil. "When there are multiple lanes per target, last even can be only in one of them"
 	lastTime := (lastEvents maxValue: [ :each | each endTime ]).
-	^ (numFrames / (lastTime asMicroseconds / 1e6)) asFloat
+	^ (self numFrames / (lastTime asMicroseconds / 1e6)) asFloat
 ]
 
 { #category : #rendering }
