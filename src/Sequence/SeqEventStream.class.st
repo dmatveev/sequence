@@ -157,6 +157,13 @@ SeqEventStream >> onStart: aStartBlock [
 	startBlock := aStartBlock
 ]
 
+{ #category : #simulation }
+SeqEventStream >> printOn: aStream [
+	thisState printOn: aStream.
+	aStream nextPutAll: '/'.
+	thisBlock printOn: aStream.
+]
+
 { #category : #attributes }
 SeqEventStream >> seqBlocks: aCollection [ 
 	"Note: this method remembers a collection of blocks but doesn't form an execution stream.

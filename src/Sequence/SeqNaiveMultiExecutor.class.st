@@ -2,20 +2,16 @@ Class {
 	#name : #SeqNaiveMultiExecutor,
 	#superclass : #SeqMultiExecutor,
 	#instVars : [
-		'streams'
+		'streams',
+		'scheduler'
 	],
 	#category : #Sequence
 }
 
 { #category : #'as yet unclassified' }
 SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
-	| sched trace |
-	sched := self new.
-	aCollectionOfSequences do: [ :each | sched add: each ].
-	sched runFor: aDuration.
-	trace := SeqTrace new.
-	aCollectionOfSequences do: [ :each | trace add: each over: (sched counters: each) ].
-	^trace
+	^self new run: aCollectionOfSequences  for: aDuration
+
 ]
 
 { #category : #accessing }
@@ -65,17 +61,41 @@ SeqNaiveMultiExecutor >> initialize [
 ]
 
 { #category : #accessing }
+SeqNaiveMultiExecutor >> run: aCollectionOfSequences for: aDuration [
+	"Shouldn't be mixed with other (manual) path"
+	| trace |
+
+	self assert: streams isEmpty.
+
+	aCollectionOfSequences do: [ :each | self add: each ].
+	self runFor: aDuration.
+	trace := SeqTrace new.
+	aCollectionOfSequences do: [ :each | trace add: each over: (self counters: each) ].
+	^trace
+]
+
+{ #category : #accessing }
 SeqNaiveMultiExecutor >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
 	THIS is a total copy of the SeqNaiveSchedulerMethod. Should be unified among them somehow.
 	The only change: it advances only one block at a time"
-   [ elapsed < aDuration ] whileTrue: [	| blocksToPick nextTick |
+   [ elapsed < aDuration ] whileTrue: [	| streamsToPick nextStream nextTick |
 		streams do: [ :each | each updateTimePoint: elapsed ].
-		blocksToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
-		nextTick := blocksToPick first nextTick.
-		"(blocksToPick select: [ :each | each nextTick = nextTick ]) do: [ :each | each advance ]."
+		streamsToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
+		nextStream := self scheduler decide: streamsToPick.
+		nextTick := nextStream nextTick.
 		self assert: nextTick >= elapsed.
-		blocksToPick first advance.
+		nextStream advance.
 		elapsed := nextTick].
+]
+
+{ #category : #accessing }
+SeqNaiveMultiExecutor >> scheduler [
+	^scheduler ifNil: [ scheduler := SeqDumbScheduler new ]
+]
+
+{ #category : #accessing }
+SeqNaiveMultiExecutor >> scheduler: aScheduler [
+	scheduler := aScheduler
 ]

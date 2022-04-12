@@ -71,7 +71,8 @@ SeqTrace >> colorFor: anEvent [
 	baseColor := self colors scale: anEvent frame sequence.
 	
 	"Adjust color transparency pased on index. Sources handled separately"
-	^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor.
+	"^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor."
+	^baseColor
 
 ]
 
