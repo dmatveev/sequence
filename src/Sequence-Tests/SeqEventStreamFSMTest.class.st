@@ -10,10 +10,10 @@ Class {
 }
 
 { #category : #tests }
-SeqEventStreamFSMTest >> initialize [
+SeqEventStreamFSMTest >> setUp [
 	| arr |
 
-	super initialize.
+	super setUp.
 
 	started := 0.
 	finished := 0.
@@ -48,7 +48,10 @@ SeqEventStreamFSMTest >> testFSM [
 	self assert: evStream nextTick equals: 10 ms.
 	self assert: started equals: 1.
 	
-	"Switch to point (3): A completes, B starts. Next event should be at 15ms (10+5)"
+	"Switch to point (3): A completes"
+	evStream advance.
+		
+	" B starts. Next event should be at 15ms (10+5)"
 	evStream advance.
 	self assert: evStream nextTick equals: 15 ms.
 	

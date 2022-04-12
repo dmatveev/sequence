@@ -54,7 +54,7 @@ SeqEventStream >> canWork [
 	thisState = #ready ifTrue: [ ^blockStream peek target canLock: blockStream peek ].
 	
 	"In #exec state, we can work if: thisBlock is already locked (leave it) OR it can lock (enter it)"
-	thisState = #exec ifTrue: [ ^thisToken isNotNil ].
+	thisState = #exec ifTrue: [ ^thisToken isNotNil or: [ blockStream peek target canLock: blockStream peek ]].
 	
 	"...in all other cases."
 	^false.
@@ -75,12 +75,14 @@ SeqEventStream >> enterNewBlock [
 
 { #category : #initialization }
 SeqEventStream >> handleAdvanceExec [
-	self leaveThisBlock.
-	blockStream atEnd
-		ifFalse: [self enterNewBlock]
-		ifTrue: [ thisState := #idle.
-					 completeBlock ifNotNil: completeBlock.
-					 startBlockCalled := false.]
+	thisToken
+		ifNil: [self enterNewBlock ]
+		ifNotNil: [ 	self leaveThisBlock.
+				blockStream atEnd ifFalse: [ ^self ].
+				thisState := #idle.
+				completeBlock ifNotNil: completeBlock.
+				startBlockCalled := false].
+
 ]
 
 { #category : #simulation }
@@ -191,8 +193,10 @@ SeqEventStream >> updateFrame: aSeqFrame [
 SeqEventStream >> updateTimePoint: aTimePoint [
 	"Self-check. A time point shouldn't be updated for the stream until the #nextEvent happen.
 	Applies only to #exec state."
-	thisState = #exec ifTrue: [ self assert: nextEventTime >= aTimePoint ].
+	(thisState = #exec and: (thisToken isNotNil)) ifTrue: [ self assert: nextEventTime >= aTimePoint ].
 	thisTimePoint := aTimePoint.
-	(thisState = #idle or: (thisState = #ready)) ifTrue: [ nextEventTime := thisTimePoint. ]
+	(thisState = #idle or:
+		(thisState = #ready or:
+			(thisState = #exec and: (thisToken isNil)))) ifTrue: [ nextEventTime := thisTimePoint. ]
 
 ]

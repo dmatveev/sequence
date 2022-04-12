@@ -14,6 +14,14 @@ SeqRoundRobinScheduler >> decide: aCollectionOfStreams [
 	
 	"FIXME: Generating the whole sorted collection is likely highly inefficient"
 	| sorted picked earliest |
+	
+	"TODO: Test would identify it earlier!"
+	aCollectionOfStreams size = 1 ifTrue: [ 
+		picked := aCollectionOfStreams first.
+		self decisions: picked. "This is ugly side-effect!".
+		self markDecision: picked.
+		^picked].
+	
 	earliest := aCollectionOfStreams first nextTick.
 	sorted := (aCollectionOfStreams select: [ :each | each nextTick = earliest ])
 		asSortedCollection: [ :s1 :s2 | (self decisions: s1) < (self decisions: s2) ].

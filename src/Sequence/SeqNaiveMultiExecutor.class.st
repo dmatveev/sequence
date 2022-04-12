@@ -79,7 +79,8 @@ SeqNaiveMultiExecutor >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
 	THIS is a total copy of the SeqNaiveSchedulerMethod. Should be unified among them somehow.
-	The only change: it advances only one block at a time"
+	The only change: it advances only one block at a time.
+	The other change: it delegates block execution to the scheduler"
    [ elapsed < aDuration ] whileTrue: [	| streamsToPick nextStream nextTick |
 		streams do: [ :each | each updateTimePoint: elapsed ].
 		streamsToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].

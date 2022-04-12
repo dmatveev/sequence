@@ -35,11 +35,17 @@ SeqTrace >> addLegend: view [
 	lb
 		beFixedWithTitle: 'Statistics'.
 	sequences do: [ :each |
-		| cntrs |
+		| cntrs str |
 		cntrs := counters at: each.
-		lb text: (' ' join: {each name. 'average latency:'. (cntrs at: #latencyAverage) asMilliSeconds. 'ms'}).
-		lb text: (' ' join: {each name. 'median latency:'.  (cntrs at: #latencyMedian)  asMilliSeconds. 'ms'})].
-	lb	build.
+		str := ' ' join: {
+			each name. 'latency avg.:'.
+			"Note: not using #asMilliseconds to keep the .xx fractional part"
+			(cntrs at: #latencyAverage) asMicroseconds / 1000.0.
+			'ms, med.:'.
+			(cntrs at: #latencyMedian) asMicroseconds / 1000.0.
+			'ms'}.
+		lb text: str].
+	lb	build
 ]
 
 { #category : #accessors }
@@ -54,26 +60,21 @@ SeqTrace >> allEvents [
 { #category : #accessors }
 SeqTrace >> allLanes [
 	"This object needs to be cached to preserve the order in-between calls"
-	^allLanes ifNil: [ | knownTargets topoTargets w |
+	^allLanes ifNil: [ | knownTargets topoTargets wLive wRest |
 		knownTargets := Set new.
 		topoTargets := (sequences collect: [:each | each topoSorted collect: #target]) flattened.
-		w := WriteStream on: OrderedCollection new.
+		wLive := WriteStream on: OrderedCollection new.
+		wRest := WriteStream on: OrderedCollection new.
 		topoTargets
 			reject: [:each | knownTargets includes: each]
 			thenDo: [:each | knownTargets add: each.
-								  w nextPutAll: each execLanes].
-		allLanes := w contents ]
+								  each execLanes do: [:l | (l allLive ifTrue: [wLive] ifFalse: [wRest]) nextPut: l]].
+		allLanes := wLive contents, wRest contents].
 ]
 
 { #category : #rendering }
 SeqTrace >> colorFor: anEvent [
-	| baseColor |
-	baseColor := self colors scale: anEvent frame sequence.
-	
-	"Adjust color transparency pased on index. Sources handled separately"
-	"^Color white alphaMixed: (anEvent frame id * 0.05) with: baseColor."
-	^baseColor
-
+	^self colors scale: (anEvent frame sequence).
 ]
 
 { #category : #rendering }
