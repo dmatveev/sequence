@@ -81,7 +81,7 @@ SeqNaiveExecutor >> runLiveFor: aDuration [
 	opBlocks ifNotEmpty: [ 
 		blockStream := SeqEventStream on: opBlocks.
 		blockStream
-			canStartTest: [ pendingFrames head isNotNil ];
+			canStartTest: [ pendingFrames isEmpty not ];
 			onStart: [
 				blockStream updateFrame: pendingFrames first.
 				pendingFrames removeFirst ];
