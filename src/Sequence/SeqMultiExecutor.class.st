@@ -31,6 +31,8 @@ SeqMultiExecutor >> counters: aSequence [
 		(frames > 0 ifTrue: [(latencies at: aSequence) average] ifFalse: [0 ms]).
 	counters at: #latencyMedian put:
 		(frames > 0 ifTrue: [(latencies at: aSequence) median] ifFalse: [0 ms]).
+	counters at: #latencyMax put:
+		(frames > 0 ifTrue: [(latencies at: aSequence) max] ifFalse:  [0 ms]).
 	counters at: #completedFrames put: frames.
 	^counters
 ]

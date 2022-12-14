@@ -43,6 +43,8 @@ SeqTrace >> addLegend: view [
 			(cntrs at: #latencyAverage) asMicroseconds / 1000.0.
 			'ms, med.:'.
 			(cntrs at: #latencyMedian) asMicroseconds / 1000.0.
+			'ms, max:'.
+			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
 			'ms'}.
 		lb text: str].
 	lb	build
