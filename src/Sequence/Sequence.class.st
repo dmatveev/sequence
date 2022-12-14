@@ -73,6 +73,12 @@ Sequence >> name: aString [
 	userDefinedName := aString
 ]
 
+{ #category : #private }
+Sequence >> printOn: aStream [
+	aStream nextPutAll: 'a Sequence'.
+	userDefinedName ifNotNil: [ aStream nextPut: $:; space; nextPutAll: userDefinedName ]
+]
+
 { #category : #rendering }
 Sequence >> renderOn: view [
 	| labels eb |

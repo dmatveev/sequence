@@ -14,7 +14,7 @@ SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
 
 ]
 
-{ #category : #accessing }
+{ #category : #private }
 SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	| frame inputStream pendingFrames blockStream liveStream liveBlock opBlocks |
 
@@ -44,7 +44,7 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	"FIXME: this is a total copy of the SeqNaiveScheduler parts"
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
-		canStartTest: [ pendingFrames head isNotNil ];
+		canStartTest: [ pendingFrames isEmpty not ];
 		onStart: [
 			blockStream updateFrame: pendingFrames first.
 			pendingFrames removeFirst.
