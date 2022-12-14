@@ -86,6 +86,11 @@ SeqTrace >> colors [
 		colors]
 ]
 
+{ #category : #accessors }
+SeqTrace >> counters [
+	^counters
+]
+
 { #category : #initialization }
 SeqTrace >> initialize [
 	super initialize.

@@ -36,7 +36,7 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 		canStartTest: [ true ];
 		onStart: [
 			frame := inputStream next.
-			frame timestamp: elapsed.
+			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
 		onComplete: [ pendingFrames add: frame ].
 	streams add: liveStream.
