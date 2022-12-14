@@ -26,7 +26,7 @@ SeqMultiExecutor >> counters: aSequence [
 	"Generate execution counters based on what we've registered"
 	| counters frames |
 	counters := Dictionary new.
-	frames := completedFrames at: aSequence.
+	frames := completedFrames at: aSequence ifAbsent: [0].
 	counters at: #latencyAverage put:
 		(frames > 0 ifTrue: [(latencies at: aSequence) average] ifFalse: [0 ms]).
 	counters at: #latencyMedian put:

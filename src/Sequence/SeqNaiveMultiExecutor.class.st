@@ -54,27 +54,23 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	self register: aSequence.
 ]
 
-{ #category : #accessing }
+{ #category : #initialization }
 SeqNaiveMultiExecutor >> initialize [
 	super initialize.
 	streams := OrderedCollection new.
 ]
 
-{ #category : #accessing }
+{ #category : #modelling }
 SeqNaiveMultiExecutor >> run: aCollectionOfSequences for: aDuration [
 	"Shouldn't be mixed with other (manual) path"
-	| trace |
-
 	self assert: streams isEmpty.
 
 	aCollectionOfSequences do: [ :each | self add: each ].
 	self runFor: aDuration.
-	trace := SeqTrace new.
-	aCollectionOfSequences do: [ :each | trace add: each over: (self counters: each) ].
-	^trace
+	^self trace
 ]
 
-{ #category : #accessing }
+{ #category : #private }
 SeqNaiveMultiExecutor >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
@@ -99,4 +95,13 @@ SeqNaiveMultiExecutor >> scheduler [
 { #category : #accessing }
 SeqNaiveMultiExecutor >> scheduler: aScheduler [
 	scheduler := aScheduler
+]
+
+{ #category : #modelling }
+SeqNaiveMultiExecutor >> trace [
+	| trace |
+	trace := SeqTrace new.
+	"FIXME: The below construction is not that classy"
+	latencies keysDo: [ :seq | trace add: seq over: (self counters: seq) ].
+	^trace
 ]
