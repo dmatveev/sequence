@@ -43,6 +43,6 @@ SeqRoundRobinScheduler >> initialize [
 
 { #category : #'as yet unclassified' }
 SeqRoundRobinScheduler >> markDecision: aStream [
-	decisions at: aStream update: [ :x | x + 1 ].
+	decisions at: aStream update: [ :x | x + 1 ] initial: 1.
 	^self
 ]

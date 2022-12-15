@@ -79,6 +79,7 @@ SeqNaiveMultiExecutor >> runFor: aDuration [
 	The other change: it delegates block execution to the scheduler"
    [ elapsed < aDuration ] whileTrue: [	| streamsToPick nextStream nextTick |
 		streams do: [ :each | each updateTimePoint: elapsed ].
+		"Note streams are the parallel threads of execution here, so dont get confused with the below ordering"
 		streamsToPick := (streams select: [:each | each canWork]) asSortedCollection: [ :b1 :b2 | b1 nextTick < b2 nextTick ].
 		nextStream := self scheduler decide: streamsToPick.
 		nextTick := nextStream nextTick.

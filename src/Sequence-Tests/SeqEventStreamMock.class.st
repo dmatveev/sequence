@@ -2,10 +2,16 @@ Class {
 	#name : #SeqEventStreamMock,
 	#superclass : #Object,
 	#instVars : [
-		'nextTick'
+		'nextTick',
+		'priority'
 	],
 	#category : #'Sequence-Tests'
 }
+
+{ #category : #mock }
+SeqEventStreamMock >> initialize [
+	priority := 0
+]
 
 { #category : #accessing }
 SeqEventStreamMock >> nextTick [
@@ -17,4 +23,14 @@ SeqEventStreamMock >> nextTick [
 SeqEventStreamMock >> nextTick: anObject [
 
 	nextTick := anObject
+]
+
+{ #category : #mock }
+SeqEventStreamMock >> priority [
+	^ priority
+]
+
+{ #category : #mock }
+SeqEventStreamMock >> priority: p [ 
+	priority := p.
 ]

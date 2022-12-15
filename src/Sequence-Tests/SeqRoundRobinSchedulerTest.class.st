@@ -51,6 +51,27 @@ SeqRoundRobinSchedulerTest >> testDecide [
 ]
 
 { #category : #tests }
+SeqRoundRobinSchedulerTest >> testDecideWithPriorities [
+	| sm1 sm2 pick |
+	
+	self skip.
+	
+	sm1 := SeqEventStreamMock new.
+	sm2 := SeqEventStreamMock new.
+	
+	sm1 nextTick: 5 ms.
+	sm2 nextTick: 6 ms.
+	
+   "Win32: 0 (idle/lowest) to 31 (realtime/highest)".
+   "BTW scheduder doesn't care, only order matters"
+   sm1 priority: 8.
+   sm2 priority: 24.
+
+   pick := sched decide: { sm1. sm2 }.
+   self assert: pick equals: sm2.	 
+]
+
+{ #category : #tests }
 SeqRoundRobinSchedulerTest >> testMarkDecision [
 	"By default, there's no decisions per stream."
 	self assert: (sched decisions: 1) equals: 0.

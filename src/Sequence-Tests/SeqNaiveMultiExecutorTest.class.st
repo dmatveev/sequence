@@ -2,8 +2,7 @@ Class {
 	#name : #SeqNaiveMultiExecutorTest,
 	#superclass : #TestCase,
 	#instVars : [
-		'exec',
-		'ctrs2'
+		'exec'
 	],
 	#category : #'Sequence-Tests'
 }
@@ -35,6 +34,55 @@ SeqNaiveMultiExecutorTest >> testAddWith [
 ]
 
 { #category : #tests }
+SeqNaiveMultiExecutorTest >> testLiveSourcesOfCompetingStreamsShouldRun [
+	| seq1 seq2 ctrs1 ctrs2 tgt|
+
+	self skip.
+
+	seq1 := self makeSequence name: 'Seq1'.
+	seq2 := self makeSequence name: 'Seq2'.
+	
+	"Make some competition now..."
+	tgt := SeqTarget new.
+	seq1 topoSorted last target: tgt.
+	seq2 topoSorted last target: tgt.
+	
+	exec add: seq1 with: [ ]. "TODO: Must include priority!"
+	exec add: seq2 with: [ ]. "TODO: Must include priority!"
+	exec scheduler: SeqRoundRobinScheduler new.
+
+	exec runFor: 10 ms.
+	ctrs1 := exec counters: seq1.
+	ctrs2 := exec counters: seq2.
+	
+	"seq1 may shouldn't complete any frame..."
+	self assert: (ctrs1 at: #completedFrames) equals: 0.
+	
+   "however.. the live src of seq2 should still run!"
+
+]
+
+{ #category : #tests }
+SeqNaiveMultiExecutorTest >> testNonCompetingStreamsShouldRun [
+	| seq1 seq2 ctrs1 ctrs2 |
+	
+	self skip.
+	
+	seq1 := self makeSequence.
+	seq2 := self makeSequence.
+	exec add: seq1 with: [ ]. "TODO: Must include priority!"
+	exec add: seq2 with: [ ]. "TODO: Must include priority!"
+
+	exec runFor: 10 ms.
+	ctrs1 := exec counters: seq1.
+	ctrs2 := exec counters: seq2.
+	
+	"Even if seq2's priority is higher than seq1, since the blocks of these pipelines don't
+	compete for the same resource (target), seq1 should run too"
+	self assert: (ctrs1 at: #completedFrames) > 0
+]
+
+{ #category : #tests }
 SeqNaiveMultiExecutorTest >> testRunFor [
 	"Run a single simple sequence and check the counters.
 	FIXME counters could be checked better!"
@@ -58,7 +106,7 @@ SeqNaiveMultiExecutorTest >> testRunFor [
 SeqNaiveMultiExecutorTest >> testRunFor2 [
 	"Run two simple sequences and check the counters"
 
-	| seq1 seq2 ctrs1 |
+	| seq1 seq2 ctrs1 ctrs2 |
 	seq1 := self makeSequence.
 	seq2 := self makeSequence.
 	exec add: seq1.
@@ -71,9 +119,4 @@ SeqNaiveMultiExecutorTest >> testRunFor2 [
 	"These two pipelines don't compete for device, their counters should match"
 	self assert: (ctrs1 at: #completedFrames) equals: 8. "Why not 9 for both? See #1 on Github"
 	self assert: (ctrs2 at: #completedFrames) equals: 8.
-]
-
-{ #category : #tests }
-SeqNaiveMultiExecutorTest >> testScheduler [
-	"So far this is a pretty dumb check"
 ]
