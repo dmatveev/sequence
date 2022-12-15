@@ -3,7 +3,8 @@ Class {
 	#superclass : #SeqMultiExecutor,
 	#instVars : [
 		'streams',
-		'scheduler'
+		'scheduler',
+		'sequences'
 	],
 	#category : #Sequence
 }
@@ -52,18 +53,21 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 		onComplete: [ self registerCompleted: aSequence at: blockStream currentTime ].
 	streams add: blockStream.
 	self register: aSequence.
+	sequences add: aSequence. "NB: Shouldn't this be combined with #register?"
 ]
 
 { #category : #initialization }
 SeqNaiveMultiExecutor >> initialize [
 	super initialize.
 	streams := OrderedCollection new.
+	sequences := OrderedCollection new.
 ]
 
 { #category : #modelling }
 SeqNaiveMultiExecutor >> run: aCollectionOfSequences for: aDuration [
 	"Shouldn't be mixed with other (manual) path"
 	self assert: streams isEmpty.
+	self assert: sequences isEmpty.
 
 	aCollectionOfSequences do: [ :each | self add: each ].
 	self runFor: aDuration.
@@ -103,6 +107,6 @@ SeqNaiveMultiExecutor >> trace [
 	| trace |
 	trace := SeqTrace new.
 	"FIXME: The below construction is not that classy"
-	latencies keysDo: [ :seq | trace add: seq over: (self counters: seq) ].
+	sequences do: [ :seq | trace add: seq over: (self counters: seq) ].
 	^trace
 ]
