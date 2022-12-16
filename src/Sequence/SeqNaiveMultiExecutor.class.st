@@ -16,7 +16,17 @@ SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
 ]
 
 { #category : #private }
+SeqNaiveMultiExecutor >> add: aSequence priority: aNumber [
+	^self add: aSequence with: [] priority: aNumber
+]
+
+{ #category : #private }
 SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
+	^self add: aSequence with: anInputStreamBlock priority: 0
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock priority: aPriority [
 	| inputStream firstBlock opBlocks  |
 
 	self checkIfCanHandle: aSequence.
@@ -29,16 +39,16 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	"Add stream(s) associated with the sequence to the executor."
 	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
-	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock with: inputStream ].
-	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks with: inputStream ].
-	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted with: inputStream ].
+	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock with: inputStream priority: aPriority ].
+	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks with: inputStream priority: aPriority ].
+	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted with: inputStream priority: aPriority ].
 	
 	"If reached here, something is wrong."
 	self error: 'Don''t know how to handle such sequence'.
 ]
 
 { #category : #private }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream [
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream priority: aNumber [
 	| frame liveStream |
 
 	liveStream := SeqEventStream with: aLiveBlock.
@@ -48,12 +58,13 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream [
 			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
-		onComplete: [].
+		onComplete: [];
+		priority: aNumber.
 	streams add: liveStream.
 ]
 
 { #category : #private }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: anInputStream [
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: anInputStream priority: aNumber [
 	| frame liveStream pendingFrames blockStream |
 
 	pendingFrames := DoubleLinkedList new.
@@ -65,7 +76,8 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: 
 			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
-		onComplete: [ pendingFrames add: frame ].
+		onComplete: [ pendingFrames add: frame ];
+		priority: aNumber.
 	streams add: liveStream.
 	
 	blockStream := SeqEventStream on: opBlocks.
@@ -75,12 +87,13 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: 
 			blockStream updateFrame: pendingFrames first.
 			pendingFrames removeFirst.
 			self registerStarted: anInputStream sequence at: blockStream currentTime ];
-		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ].
+		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
+		priority: aNumber.
 	streams add: blockStream.
 ]
 
 { #category : #private }
-SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream [
+SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream priority: aNumber [
 	| blockStream |
 
 	blockStream := SeqEventStream on: opBlocks.
@@ -92,7 +105,8 @@ SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream [
 			frame timestamp: elapsed. "FIXME: or currentTime?"
 			blockStream updateFrame: frame.
 			self registerStarted: anInputStream sequence at: blockStream currentTime ];
-		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ].
+		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
+		priority: aNumber.
 	streams add: blockStream.
 ]
 

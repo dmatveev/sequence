@@ -13,7 +13,8 @@ Class {
 		'startBlock',
 		'seqBlocks',
 		'canStartBlock',
-		'startBlockCalled'
+		'startBlockCalled',
+		'priority'
 	],
 	#category : #Sequence
 }
@@ -38,6 +39,23 @@ SeqEventStream >> advance [
 	
 ]
 
+{ #category : #modelling }
+SeqEventStream >> blockToWork [
+	"Answer which block is going to work under the nextTick"
+	"In #idle state, there's no such information at all"
+	thisState = #idle ifTrue: [ ^nil ].
+
+	"In #ready state, It is our stream's peek. Note there's no thisBlock yet"
+	thisState = #ready ifTrue: [ ^blockStream peek ].
+	
+	"In #exec state, it is the currentBlock (if already locked) or peek (if about to lock)"
+	thisState = #exec ifTrue: [ ^thisToken ifNil: [blockStream peek] ifNotNil: [thisBlock]].
+	
+	"...in all other cases."
+	self error: 'Unhandled state'.
+	^false.
+]
+
 { #category : #attributes }
 SeqEventStream >> canStartTest: aBlockClosure [ 
 	canStartBlock := aBlockClosure
@@ -57,6 +75,7 @@ SeqEventStream >> canWork [
 	thisState = #exec ifTrue: [ ^thisToken isNotNil or: [ blockStream peek target canLock: blockStream peek ]].
 	
 	"...in all other cases."
+	self error: 'Unhandled state'.
 	^false.
 ]
 
@@ -121,13 +140,14 @@ SeqEventStream >> initialize [
 	
 	"Define the FSM:
                      #updateFrame:     . #advance . . . .
-            canStart?  :              :                 :
-	      +------+   :  :   +-------+  :  +-----------+  :
-	      | Ilde | -(?)---> | Ready | --> | Execution | ---.
-	      +------+          +-------+     +-----------+    |
-              ^                          |      ^       |
-	           '--------------------------'      '-------'
-	            #updateFrame:
+             canStart?  :              :                 :
+          +------+   :  :   +-------+  :  +-----------+  :
+          | Ilde | -(?)---> | Ready | --> | Execution | ---.
+          +------+          +-------+     +-----------+    |
+                 ^                          |      ^       |
+                 '--------------------------'      '-------'
+                   #updateFrame:
+
 	The next tick (see #nextTick) and the aciton under #advance: are defined given the state."
 
 ]
@@ -166,6 +186,16 @@ SeqEventStream >> printOn: aStream [
 	thisBlock printOn: aStream.
 ]
 
+{ #category : #modelling }
+SeqEventStream >> priority [
+	^priority ifNil: [ 0 ]
+]
+
+{ #category : #accessors }
+SeqEventStream >> priority: anInteger [ 
+	priority := anInteger
+]
+
 { #category : #attributes }
 SeqEventStream >> seqBlocks: aCollection [ 
 	"Note: this method remembers a collection of blocks but doesn't form an execution stream.
@@ -199,4 +229,10 @@ SeqEventStream >> updateTimePoint: aTimePoint [
 		(thisState = #ready or:
 			(thisState = #exec and: (thisToken isNil)))) ifTrue: [ nextEventTime := thisTimePoint. ]
 
+]
+
+{ #category : #modelling }
+SeqEventStream >> wantsToLeave [
+	"Give a hint to scheduler if this stream's current block just wants to complete its resource"
+	^thisState = #exec and: thisToken isNotNil
 ]
