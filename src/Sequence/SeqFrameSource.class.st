@@ -54,6 +54,12 @@ SeqFrameSource >> next [
 	^frame
 ]
 
+{ #category : #accessing }
+SeqFrameSource >> sequence [
+
+	^ sequence
+]
+
 { #category : #stream }
 SeqFrameSource >> sequence: aSequence [
 	sequence := aSequence.

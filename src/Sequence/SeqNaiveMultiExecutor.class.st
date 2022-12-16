@@ -17,43 +17,90 @@ SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
 
 { #category : #private }
 SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
-	| frame inputStream pendingFrames blockStream liveStream liveBlock opBlocks |
+	| inputStream firstBlock opBlocks  |
 
-	"So far only handle the live case"
-	self assert: aSequence topoSorted first isLive.
-	completedFrames at: aSequence put: 0.
+	self checkIfCanHandle: aSequence.
+	self register: aSequence.
+	sequences add: aSequence. "NB: Shouldn't this be combined with #register?"
+	completedFrames at: aSequence put: 0. "NB. Why on Earth.."
+	
 	inputStream := SeqFrameSource using: anInputStreamBlock for: aSequence.
-
-	pendingFrames := DoubleLinkedList new.
-	liveBlock := aSequence topoSorted first.
+	
+	"Add stream(s) associated with the sequence to the executor."
+	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
+	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock with: inputStream ].
+	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks with: inputStream ].
+	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted with: inputStream ].
 	
-	"Live block-only sequences are also not supported"
-	self assert: opBlocks notEmpty.
-	
-	"FIXME: this is a total copy of the SeqNaiveScheduler parts."
-	liveStream := SeqEventStream with: liveBlock.
+	"If reached here, something is wrong."
+	self error: 'Don''t know how to handle such sequence'.
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream [
+	| frame liveStream |
+
+	liveStream := SeqEventStream with: aLiveBlock.
 	liveStream
 		canStartTest: [ true ];
 		onStart: [
-			frame := inputStream next.
+			frame := anInputStream next.
+			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
+			liveStream updateFrame: frame ];
+		onComplete: [].
+	streams add: liveStream.
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: anInputStream [
+	| frame liveStream pendingFrames blockStream |
+
+	pendingFrames := DoubleLinkedList new.
+
+	liveStream := SeqEventStream with: aLiveBlock.
+	liveStream
+		canStartTest: [ true ];
+		onStart: [
+			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
 		onComplete: [ pendingFrames add: frame ].
 	streams add: liveStream.
-
-	"FIXME: this is a total copy of the SeqNaiveScheduler parts"
+	
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
 		canStartTest: [ pendingFrames isEmpty not ];
 		onStart: [
 			blockStream updateFrame: pendingFrames first.
 			pendingFrames removeFirst.
-			self registerStarted: aSequence at: blockStream currentTime ];
-		onComplete: [ self registerCompleted: aSequence at: blockStream currentTime ].
+			self registerStarted: anInputStream sequence at: blockStream currentTime ];
+		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ].
 	streams add: blockStream.
-	self register: aSequence.
-	sequences add: aSequence. "NB: Shouldn't this be combined with #register?"
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream [
+	| blockStream |
+
+	blockStream := SeqEventStream on: opBlocks.
+	blockStream
+		canStartTest: [ true ];
+		onStart: [
+			| frame |
+			frame := anInputStream next.
+			frame timestamp: elapsed. "FIXME: or currentTime?"
+			blockStream updateFrame: frame.
+			self registerStarted: anInputStream sequence at: blockStream currentTime ];
+		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ].
+	streams add: blockStream.
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> checkIfCanHandle: aSequence [
+	"FIXME: Probably this method shouldn't exist. If a Sequence has been created,
+	any executor should be able to handle it."
+	self assert: (aSequence topoSorted select: [ :each | each isLive ]) size <= 1.
 ]
 
 { #category : #initialization }

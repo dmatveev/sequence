@@ -34,6 +34,40 @@ SeqNaiveMultiExecutorTest >> testAddWith [
 ]
 
 { #category : #tests }
+SeqNaiveMultiExecutorTest >> testJustLiveSource [
+	"Stream executor should handle the case where there's just a live source and nothing else."
+	
+	| src seq trace |
+	src := 'Src' asSeqBlock latency: 1 ms; live.
+	seq := Sequence startingWith: src.
+	exec add: seq.
+	exec runFor: 10 ms.
+	
+	"There may be no counters for such sequence, it is FIXME for now.
+	But other modelling properties must be in place."
+	trace := exec trace.
+	self assert: trace allLanes size equals: 1.
+	self assert: trace allLanes first events size equals: 10.
+]
+
+{ #category : #tests }
+SeqNaiveMultiExecutorTest >> testJustOperation [
+	"Stream executor should handle the case where there's just an operation and nothing else."
+	
+	| src seq trace |
+	src := 'Op' asSeqBlock latency: 1 ms.
+	seq := Sequence startingWith: src.
+	exec add: seq.
+	exec runFor: 10 ms.
+	
+	"There may be no counters for such sequence, it is FIXME for now.
+	But other modelling properties must be in place."
+	trace := exec trace.
+	self assert: trace allLanes size equals: 1.
+	self assert: trace allLanes first events size equals: 10.
+]
+
+{ #category : #tests }
 SeqNaiveMultiExecutorTest >> testLiveSourcesOfCompetingStreamsShouldRun [
 	| seq1 seq2 ctrs1 ctrs2 tgt|
 
