@@ -8,7 +8,9 @@ Class {
 		'sequences',
 		'counters',
 		'laneYs',
-		'laneHeights'
+		'laneHeights',
+		'factor',
+		'yfactor'
 	],
 	#category : #Sequence
 }
@@ -99,6 +101,8 @@ SeqTrace >> initialize [
 	sequences := OrderedCollection new.
 	counters := Dictionary new.
 	targets := Set new.
+	factor := 1000. "1000 for ms scale. Use 1 for usecs for your own risk!"
+	yfactor := 1.
 ]
 
 { #category : #'GTInspector-Extensions' }
@@ -114,7 +118,9 @@ SeqTrace >> inspectorCanvas [
 
 { #category : #rendering }
 SeqTrace >> laneHeight: aLane [
-	^aLane allLive ifTrue: [6] ifFalse: [24]
+	| h |
+	h := aLane allLive ifTrue: [4] ifFalse: [24].
+	^h * yfactor. "At this point I don't really know what am doing"
 ]
 
 { #category : #accessors }
@@ -152,7 +158,7 @@ SeqTrace >> numFrames: anObject [
 SeqTrace >> positionFor: anEvent [
 	| x y idx offsetFix |
 	idx := self allLanes indexOf: anEvent lane. "This may be a bottleneck"
-	x := anEvent startTime asMilliSeconds asFloat.
+	x := (anEvent startTime asMicroseconds / factor) asFloat.
 	y := self laneYs at: idx.
 
 	"Those are the top-left coordinates, but Roassal seem to expect a central point.."
@@ -165,16 +171,18 @@ SeqTrace >> renderOn: view [
 	| es b |
 	b := RSBorder new
 		color: #veryDarkGray;
-		width: 0.5;
+		width: 0.25;
 		yourself.
-	es := self allEvents collect: [ :ev || idx |
+	es := self allEvents collect: [ :ev || idx w box |
 		idx := self allLanes indexOf: ev lane.
-		RSBox new
-			width: (self widthFor: ev);
+		w := self widthFor: ev.
+		box := RSBox new
+			width: w;
 			height: (self laneHeights at: idx);
 			color: (self colorFor: ev);
-			border: b;
-			model: ev	].
+			model: ev.
+		w > 1.0 ifTrue: [ box border: b ].
+		box].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
 	self addLegend: view.
@@ -213,5 +221,15 @@ SeqTrace >> utilization [
 
 { #category : #rendering }
 SeqTrace >> widthFor: anEvent [
-	^(anEvent duration asMicroseconds / 1000) asFloat
+	^(anEvent duration asMicroseconds / factor) asFloat
+]
+
+{ #category : #rendering }
+SeqTrace >> xfactor: aNumber [
+	factor := aNumber
+]
+
+{ #category : #accessing }
+SeqTrace >> yfactor: anInteger [ 
+	yfactor := anInteger
 ]

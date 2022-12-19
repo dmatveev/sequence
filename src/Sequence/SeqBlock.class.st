@@ -166,7 +166,7 @@ SeqBlock >> tasks [
 	^taskBlock
 ]
 
-{ #category : #accessors }
+{ #category : #tasks }
 SeqBlock >> tasks: aBlockClosure [ 
 	taskBlock := aBlockClosure
 ]
