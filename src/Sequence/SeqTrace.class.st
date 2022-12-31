@@ -224,9 +224,19 @@ SeqTrace >> widthFor: anEvent [
 	^(anEvent duration asMicroseconds / factor) asFloat
 ]
 
+{ #category : #accessing }
+SeqTrace >> xfactor [ 
+	^factor
+]
+
 { #category : #rendering }
 SeqTrace >> xfactor: aNumber [
 	factor := aNumber
+]
+
+{ #category : #accessing }
+SeqTrace >> yfactor [ 
+	^yfactor
 ]
 
 { #category : #accessing }
