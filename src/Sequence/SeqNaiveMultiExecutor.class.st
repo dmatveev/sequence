@@ -38,12 +38,12 @@ SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
 	self error: 'Don''t know how to handle such sequence'.
 ]
 
-{ #category : #configuration }
+{ #category : #compatibility }
 SeqNaiveMultiExecutor >> add: aSequence priority: aNumber [
 	^self add: aSequence with: [] priority: aNumber
 ]
 
-{ #category : #configuration }
+{ #category : #compatibility }
 SeqNaiveMultiExecutor >> add: aSequence priority: aNumber dropFrames: dropFrames [
 	| o |
 	o := SeqExecOptions new.
@@ -52,7 +52,7 @@ SeqNaiveMultiExecutor >> add: aSequence priority: aNumber dropFrames: dropFrames
 	^self add: aSequence options: o.
 ]
 
-{ #category : #configuration }
+{ #category : #compatibility }
 SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 	^self add: aSequence with: anInputStreamBlock priority: 0
 ]
@@ -86,13 +86,6 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock options: seqExecOptions [
 	streams add: liveStream.
 ]
 
-{ #category : #compatibility }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream priority: aNumber [
-	^self
-		addLiveStream: aLiveBlock
-		options: (SeqExecOptions new inputStream: anInputStream; priority: aNumber; yourself). 
-]
-
 { #category : #private }
 SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks options: seqExecOptions [
 	| frame liveStream pendingFrames blockStream anInputStream aNumber |
@@ -117,38 +110,11 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
 		canStartTest: [ pendingFrames isEmpty not ];
-		onStart: [
-			seqExecOptions hasFrameDropAllowed
-				ifFalse: [
-					"Just take next frame to process and proceed"
-					blockStream updateFrame: pendingFrames first.
-					pendingFrames removeFirst.
-					self registerStarted: anInputStream sequence at: blockStream currentTime ]
-				ifTrue: [
-					"Implement simple frame-dropping right here, if needed."				
-					"If there's > 1 frame, mark all but last as dropped already."
-					pendingFrames asArray allButLastDo: [ :each |
-						each markDropped.
-						self registerDropped: anInputStream sequence ].
-					pendingFrames last availableSince = blockStream currentTime
-						ifFalse: [
-							pendingFrames last markDropped. "Late for this too. Drop & do nothing"
-							self registerDropped: anInputStream sequence ] 
-						ifTrue: [ 
-							blockStream updateFrame: pendingFrames last.
-							self registerStarted: anInputStream sequence at: blockStream currentTime ] ].
-					pendingFrames removeAll];
+		onStart: [seqExecOptions framePolicy
+			handleStart: blockStream exec: self pending: pendingFrames ];
 		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.
-]
-
-{ #category : #compatibility }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: anInputStream priority: aNumber [
-	^self
-		addLiveStream: aLiveBlock
-		withOpStream: opBlocks
-		options: (SeqExecOptions new inputStream: anInputStream; priority: aNumber; yourself)
 ]
 
 { #category : #private }
@@ -169,14 +135,6 @@ SeqNaiveMultiExecutor >> addOpStream: opBlocks options: seqBlockOptions [
 		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.
-]
-
-{ #category : #compatibility }
-SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream priority: aNumber [
-	^self
-		addOpStream: opBlocks
-		options: (SeqExecOptions new inputStream: anInputStream; priority: aNumber; yourself). 
-
 ]
 
 { #category : #private }
