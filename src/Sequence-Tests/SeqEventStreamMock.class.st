@@ -3,10 +3,21 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'nextTick',
-		'priority'
+		'priority',
+		'blockToWork'
 	],
 	#category : #'Sequence-Tests'
 }
+
+{ #category : #mock }
+SeqEventStreamMock >> blockToWork [
+	^blockToWork
+]
+
+{ #category : #mock }
+SeqEventStreamMock >> blockToWork: aSeqBlock [
+	blockToWork := aSeqBlock
+]
 
 { #category : #mock }
 SeqEventStreamMock >> initialize [
@@ -33,4 +44,10 @@ SeqEventStreamMock >> priority [
 { #category : #mock }
 SeqEventStreamMock >> priority: p [ 
 	priority := p.
+]
+
+{ #category : #mock }
+SeqEventStreamMock >> wantsToLeave [
+	"Required for priority RR scheduler test"
+	^false
 ]

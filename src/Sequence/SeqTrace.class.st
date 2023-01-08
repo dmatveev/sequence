@@ -37,8 +37,11 @@ SeqTrace >> addLegend: view [
 	lb
 		beFixedWithTitle: 'Statistics'.
 	sequences do: [ :each |
-		| cntrs str |
+		| cntrs completed dropped str |
 		cntrs := counters at: each.
+		"FIXME: This is a looong time broken for the old Naive executor!"
+		completed := cntrs at: #completedFrames.
+		dropped := cntrs at: #droppedFrames.
 		str := ' ' join: {
 			each name. 'latency avg.:'.
 			"Note: not using #asMilliseconds to keep the .xx fractional part"
@@ -47,7 +50,8 @@ SeqTrace >> addLegend: view [
 			(cntrs at: #latencyMedian) asMicroseconds / 1000.0.
 			'ms, max:'.
 			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
-			'ms'}.
+			'ms,'.
+			'[', dropped printString, '/', (dropped + completed) printString, ']'}.
 		lb text: str].
 	lb	build
 ]
@@ -78,7 +82,8 @@ SeqTrace >> allLanes [
 
 { #category : #rendering }
 SeqTrace >> colorFor: anEvent [
-	^self colors scale: (anEvent frame sequence).
+	^self colors scale: (anEvent frame sequence)
+
 ]
 
 { #category : #rendering }
@@ -169,10 +174,7 @@ SeqTrace >> positionFor: anEvent [
 { #category : #rendering }
 SeqTrace >> renderOn: view [ 
 	| es b |
-	b := RSBorder new
-		color: #veryDarkGray;
-		width: 0.25;
-		yourself.
+	b := RSBorder new color: #veryDarkGray; width: 0.25; yourself.
 	es := self allEvents collect: [ :ev || idx w box |
 		idx := self allLanes indexOf: ev lane.
 		w := self widthFor: ev.
@@ -182,6 +184,7 @@ SeqTrace >> renderOn: view [
 			color: (self colorFor: ev);
 			model: ev.
 		w > 1.0 ifTrue: [ box border: b ].
+		ev frame dropped ifTrue: [ box color: (box color alpha: 0.25) ].
 		box].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.

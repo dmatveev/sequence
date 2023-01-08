@@ -24,6 +24,9 @@ SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
 	sequences add: aSequence. "NB: Shouldn't this be combined with #register?"
 	completedFrames at: aSequence put: 0. "NB. Why on Earth I do this manually here.."
 	
+	"FIXME: Sheer ugliness."
+	seqExecOptions sequence: aSequence.
+	
 	"Add stream(s) associated with the sequence to the executor."
 	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
@@ -38,6 +41,15 @@ SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
 { #category : #configuration }
 SeqNaiveMultiExecutor >> add: aSequence priority: aNumber [
 	^self add: aSequence with: [] priority: aNumber
+]
+
+{ #category : #configuration }
+SeqNaiveMultiExecutor >> add: aSequence priority: aNumber dropFrames: dropFrames [
+	| o |
+	o := SeqExecOptions new.
+	o priority: aNumber.
+	dropFrames ifTrue: [ o dropFrames ].
+	^self add: aSequence options: o.
 ]
 
 { #category : #configuration }
@@ -96,7 +108,9 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
-		onComplete: [ pendingFrames add: frame ];
+		onComplete: [ 
+			frame availableSince: liveStream currentTime. "FIXME: Must be propagated to other #add:"
+			pendingFrames add: frame ];
 		priority: aNumber.
 	streams add: liveStream.
 	
@@ -104,9 +118,26 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 	blockStream
 		canStartTest: [ pendingFrames isEmpty not ];
 		onStart: [
-			blockStream updateFrame: pendingFrames first.
-			pendingFrames removeFirst.
-			self registerStarted: anInputStream sequence at: blockStream currentTime ];
+			seqExecOptions hasFrameDropAllowed
+				ifFalse: [
+					"Just take next frame to process and proceed"
+					blockStream updateFrame: pendingFrames first.
+					pendingFrames removeFirst.
+					self registerStarted: anInputStream sequence at: blockStream currentTime ]
+				ifTrue: [
+					"Implement simple frame-dropping right here, if needed."				
+					"If there's > 1 frame, mark all but last as dropped already."
+					pendingFrames asArray allButLastDo: [ :each |
+						each markDropped.
+						self registerDropped: anInputStream sequence ].
+					pendingFrames last availableSince = blockStream currentTime
+						ifFalse: [
+							pendingFrames last markDropped. "Late for this too. Drop & do nothing"
+							self registerDropped: anInputStream sequence ] 
+						ifTrue: [ 
+							blockStream updateFrame: pendingFrames last.
+							self registerStarted: anInputStream sequence at: blockStream currentTime ] ].
+					pendingFrames removeAll];
 		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.

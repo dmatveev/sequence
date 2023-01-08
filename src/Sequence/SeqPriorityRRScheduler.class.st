@@ -16,7 +16,7 @@ SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
 	Our input is a sorted collection of streams, everybody ready to make its tick.
 	And tick doesn't always mean acquiring a resource.. Sometimes it is actually releasing
 	a resource -- see the SeqEventStream>>advance for details."
-	| targetDemand earliest frontRow |
+	| targetDemand earliest frontRow frontRowTop |
 	
 	"May be a short cut. If anybody here in the FRONT ROW wants to just
 	RELEASE a resource, you are welcome. Regardless of your priority!"
@@ -43,6 +43,8 @@ SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
 			topp := (candidates collect: [ :each | each priority ]) max.
 			^self markDecision: (self selectRR: (candidates select: [:each | each priority = topp])) ]	].
 	
-	"If reached here, it seems there was no occasion this time. Forget priorities? Just do RR?"
-	^self markDecision: (self selectRR: frontRow)
+	"If reached here, it seems there was no occasion this time.
+	NB: Priorities should be kept in mind here too."
+	frontRowTop := (frontRow collect: [:each | each priority]) max.
+	^self markDecision: (self selectRR: (frontRow select: [:each | each priority = frontRowTop])).
 ]

@@ -5,10 +5,22 @@ Class {
 		'id',
 		'timestamp',
 		'data',
-		'sequence'
+		'sequence',
+		'availableSince',
+		'dropped'
 	],
 	#category : #Sequence
 }
+
+{ #category : #accessing }
+SeqFrame >> availableSince [
+	^ availableSince
+]
+
+{ #category : #'as yet unclassified' }
+SeqFrame >> availableSince: aTimePoint [
+	availableSince := aTimePoint.
+]
 
 { #category : #accessing }
 SeqFrame >> data [
@@ -20,6 +32,11 @@ SeqFrame >> data: anObject [
 	data := anObject
 ]
 
+{ #category : #'as yet unclassified' }
+SeqFrame >> dropped [
+	^dropped
+]
+
 { #category : #accessing }
 SeqFrame >> id [
 	^ id
@@ -28,6 +45,17 @@ SeqFrame >> id [
 { #category : #accessing }
 SeqFrame >> id: anObject [
 	id := anObject
+]
+
+{ #category : #accessing }
+SeqFrame >> initialize [
+	super initialize.
+	dropped := false. "Assume SeqFrame must be marked explicitly to be dropped."
+]
+
+{ #category : #'as yet unclassified' }
+SeqFrame >> markDropped [
+	dropped := true
 ]
 
 { #category : #accessing }

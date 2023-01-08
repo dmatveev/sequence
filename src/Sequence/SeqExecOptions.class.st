@@ -10,15 +10,37 @@ Class {
 		'priority',
 		'inputGenerator',
 		'inputStream',
-		'allowFrameDrop'
+		'allowFrameDrop',
+		'sequence'
 	],
 	#category : #Sequence
 }
 
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> dropFrames [
+	"FIXME: Probably this is not the best semantic for this method..
+	One can confuse it with a getter."
+	allowFrameDrop := true.
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> hasFrameDropAllowed [
+	^allowFrameDrop
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> initialize [
+	super initialize.
+	allowFrameDrop := false.
+	priority := 0.
+]
+
 { #category : #accessing }
 SeqExecOptions >> inputStream [
 
-	^ inputStream
+	^ inputStream ifNil: [ 
+		"TODO: This is a huge abstraction leak here: a sequence is required for input Stream!"
+		inputStream := (SeqFrameSource using: [] for: sequence) ]
 ]
 
 { #category : #accessing }
@@ -37,4 +59,10 @@ SeqExecOptions >> priority [
 SeqExecOptions >> priority: anObject [
 
 	priority := anObject
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> sequence: aSequence [ 
+	"TODO: This is a huge abstraction leak here: a sequence is required for input Stream!"
+	sequence := aSequence
 ]
