@@ -10,7 +10,8 @@ Class {
 		'laneYs',
 		'laneHeights',
 		'factor',
-		'yfactor'
+		'yfactor',
+		'showFrameDrops'
 	],
 	#category : #Sequence
 }
@@ -37,11 +38,12 @@ SeqTrace >> addLegend: view [
 	lb
 		beFixedWithTitle: 'Statistics'.
 	sequences do: [ :each |
-		| cntrs completed dropped str |
+		| cntrs completed dropped str dropStr |
 		cntrs := counters at: each.
 		"FIXME: This is a looong time broken for the old Naive executor!"
 		completed := cntrs at: #completedFrames.
 		dropped := cntrs at: #droppedFrames.
+		dropStr := showFrameDrops ifTrue: [ dropped printString, '/' ] ifFalse: [ '' ].
 		str := ' ' join: {
 			each name. 'latency avg.:'.
 			"Note: not using #asMilliseconds to keep the .xx fractional part"
@@ -51,7 +53,7 @@ SeqTrace >> addLegend: view [
 			'ms, max:'.
 			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
 			'ms,'.
-			'[', dropped printString, '/', (dropped + completed) printString, ']'}.
+			'[', dropStr, (dropped + completed) printString, ']'}.
 		lb text: str].
 	lb	build
 ]
@@ -80,13 +82,13 @@ SeqTrace >> allLanes [
 		allLanes := wLive contents, wRest contents].
 ]
 
-{ #category : #rendering }
+{ #category : #private }
 SeqTrace >> colorFor: anEvent [
 	^self colors scale: (anEvent frame sequence)
 
 ]
 
-{ #category : #rendering }
+{ #category : #private }
 SeqTrace >> colors [
 	^colors ifNil: [colors := RSColorPalette qualitative set312.
 		"This is a trick to ensure the scale for every individual pipeline based on its index.
@@ -108,9 +110,10 @@ SeqTrace >> initialize [
 	targets := Set new.
 	factor := 1000. "1000 for ms scale. Use 1 for usecs for your own risk!"
 	yfactor := 1.
+	showFrameDrops := false.
 ]
 
-{ #category : #'GTInspector-Extensions' }
+{ #category : #inspecting }
 SeqTrace >> inspectorCanvas [
 	<inspectorPresentationOrder: 90 title: 'Canvas'>
 	| canvas |
@@ -121,20 +124,20 @@ SeqTrace >> inspectorCanvas [
 		yourself
 ]
 
-{ #category : #rendering }
+{ #category : #private }
 SeqTrace >> laneHeight: aLane [
 	| h |
 	h := aLane allLive ifTrue: [4] ifFalse: [24].
 	^h * yfactor. "At this point I don't really know what am doing"
 ]
 
-{ #category : #accessors }
+{ #category : #private }
 SeqTrace >> laneHeights [
 	^ laneHeights ifNil: [
 		laneHeights := self allLanes collect: [ :each | self laneHeight: each]]
 ]
 
-{ #category : #accessors }
+{ #category : #private }
 SeqTrace >> laneYs [
 	^ laneYs ifNil: [ | w thisOffset |
 		thisOffset := 0.
@@ -145,21 +148,21 @@ SeqTrace >> laneYs [
 		laneYs := w contents	]
 ]
 
-{ #category : #modelling }
+{ #category : #accessors }
 SeqTrace >> numFrames [
 	"Aux method. Should be called for Mono case only"
 	self assert: sequences size = 1.
 	^counters at: sequences first
 ]
 
-{ #category : #accessing }
+{ #category : #setup }
 SeqTrace >> numFrames: anObject [
 	"Aux method. Works only for the mono case"
 	self assert: sequences size = 1.
 	counters at: sequences first put: anObject.
 ]
 
-{ #category : #rendering }
+{ #category : #private }
 SeqTrace >> positionFor: anEvent [
 	| x y idx offsetFix |
 	idx := self allLanes indexOf: anEvent lane. "This may be a bottleneck"
@@ -192,7 +195,7 @@ SeqTrace >> renderOn: view [
 	view @ RSCanvasController.
 ]
 
-{ #category : #accessors }
+{ #category : #setup }
 SeqTrace >> sequence: aSequence [
 	"A legacy/compatibility method"
 	sequences := Array with: aSequence.
@@ -200,7 +203,12 @@ SeqTrace >> sequence: aSequence [
 	allLanes := nil. "Invalidate the cache"
 ]
 
-{ #category : #modelling }
+{ #category : #setup }
+SeqTrace >> showFrameDrops [
+	showFrameDrops := true.
+]
+
+{ #category : #accessors }
 SeqTrace >> throughput [
 	"Aux method."
 	"Estimate throughput based on number of completed frames & time spent:
@@ -217,32 +225,32 @@ SeqTrace >> throughput [
 	^ (self numFrames / (lastTime asMicroseconds / 1e6)) asFloat
 ]
 
-{ #category : #rendering }
+{ #category : #accessors }
 SeqTrace >> utilization [
 	^ (allLanes collect: #utilization) average asFloat
 ]
 
-{ #category : #rendering }
+{ #category : #private }
 SeqTrace >> widthFor: anEvent [
 	^(anEvent duration asMicroseconds / factor) asFloat
 ]
 
-{ #category : #accessing }
+{ #category : #accessors }
 SeqTrace >> xfactor [ 
 	^factor
 ]
 
-{ #category : #rendering }
+{ #category : #setup }
 SeqTrace >> xfactor: aNumber [
 	factor := aNumber
 ]
 
-{ #category : #accessing }
+{ #category : #accessors }
 SeqTrace >> yfactor [ 
 	^yfactor
 ]
 
-{ #category : #accessing }
+{ #category : #setup }
 SeqTrace >> yfactor: anInteger [ 
 	yfactor := anInteger
 ]
