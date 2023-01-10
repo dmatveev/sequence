@@ -15,41 +15,64 @@ SeqNaiveMultiExecutor class >> run: aCollectionOfSequences for: aDuration [
 
 ]
 
-{ #category : #private }
-SeqNaiveMultiExecutor >> add: aSequence priority: aNumber [
-	^self add: aSequence with: [] priority: aNumber
-]
-
-{ #category : #private }
-SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
-	^self add: aSequence with: anInputStreamBlock priority: 0
-]
-
-{ #category : #private }
-SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock priority: aPriority [
-	| inputStream firstBlock opBlocks  |
+{ #category : #configuration }
+SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
+	|  firstBlock opBlocks |
 
 	self checkIfCanHandle: aSequence.
 	self register: aSequence.
 	sequences add: aSequence. "NB: Shouldn't this be combined with #register?"
-	completedFrames at: aSequence put: 0. "NB. Why on Earth.."
+	completedFrames at: aSequence put: 0. "NB. Why on Earth I do this manually here.."
 	
-	inputStream := SeqFrameSource using: anInputStreamBlock for: aSequence.
+	"FIXME: Sheer ugliness."
+	seqExecOptions sequence: aSequence.
 	
 	"Add stream(s) associated with the sequence to the executor."
 	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
-	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock with: inputStream priority: aPriority ].
-	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks with: inputStream priority: aPriority ].
-	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted with: inputStream priority: aPriority ].
+	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock options: seqExecOptions ].
+	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks options: seqExecOptions ].
+	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted options: seqExecOptions ].
 	
 	"If reached here, something is wrong."
 	self error: 'Don''t know how to handle such sequence'.
 ]
 
+{ #category : #compatibility }
+SeqNaiveMultiExecutor >> add: aSequence priority: aNumber [
+	^self add: aSequence with: [] priority: aNumber
+]
+
+{ #category : #compatibility }
+SeqNaiveMultiExecutor >> add: aSequence priority: aNumber dropFrames: dropFrames [
+	| o |
+	o := SeqExecOptions new.
+	o priority: aNumber.
+	dropFrames ifTrue: [ o dropFrames ].
+	^self add: aSequence options: o.
+]
+
+{ #category : #compatibility }
+SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
+	^self add: aSequence with: anInputStreamBlock priority: 0
+]
+
+{ #category : #compatibility }
+SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock priority: aPriority [
+	| options |
+	options := SeqExecOptions new.
+	options
+		inputStream: (SeqFrameSource using: anInputStreamBlock for: aSequence);
+		priority: aPriority.
+	^self add: aSequence options: options. 
+]
+
 { #category : #private }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream priority: aNumber [
-	| frame liveStream |
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock options: seqExecOptions [
+	| frame liveStream anInputStream aNumber |
+
+	anInputStream := seqExecOptions inputStream.
+	aNumber := seqExecOptions priority.
 
 	liveStream := SeqEventStream with: aLiveBlock.
 	liveStream
@@ -64,10 +87,12 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock with: anInputStream priority:
 ]
 
 { #category : #private }
-SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: anInputStream priority: aNumber [
-	| frame liveStream pendingFrames blockStream |
+SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks options: seqExecOptions [
+	| frame liveStream pendingFrames blockStream anInputStream aNumber |
 
 	pendingFrames := DoubleLinkedList new.
+	anInputStream := seqExecOptions inputStream.
+	aNumber := seqExecOptions priority.
 
 	liveStream := SeqEventStream with: aLiveBlock.
 	liveStream
@@ -76,25 +101,27 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks with: 
 			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
-		onComplete: [ pendingFrames add: frame ];
+		onComplete: [ 
+			frame availableSince: liveStream currentTime. "FIXME: Must be propagated to other #add:"
+			pendingFrames add: frame ];
 		priority: aNumber.
 	streams add: liveStream.
 	
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
 		canStartTest: [ pendingFrames isEmpty not ];
-		onStart: [
-			blockStream updateFrame: pendingFrames first.
-			pendingFrames removeFirst.
-			self registerStarted: anInputStream sequence at: blockStream currentTime ];
+		onStart: [seqExecOptions framePolicy
+			handleStart: blockStream exec: self pending: pendingFrames ];
 		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.
 ]
 
 { #category : #private }
-SeqNaiveMultiExecutor >> addOpStream: opBlocks with: anInputStream priority: aNumber [
-	| blockStream |
+SeqNaiveMultiExecutor >> addOpStream: opBlocks options: seqBlockOptions [
+	| blockStream anInputStream aNumber |
+	anInputStream := seqBlockOptions inputStream.
+	aNumber := seqBlockOptions priority.
 
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
@@ -135,7 +162,7 @@ SeqNaiveMultiExecutor >> run: aCollectionOfSequences for: aDuration [
 	^self trace
 ]
 
-{ #category : #private }
+{ #category : #modelling }
 SeqNaiveMultiExecutor >> runFor: aDuration [
 	"This is the main simulation loop.
 	Should work uniformly for all cases.
@@ -158,12 +185,12 @@ SeqNaiveMultiExecutor >> scheduler [
 	^scheduler ifNil: [ scheduler := SeqDumbScheduler new ]
 ]
 
-{ #category : #accessing }
+{ #category : #configuration }
 SeqNaiveMultiExecutor >> scheduler: aScheduler [
 	scheduler := aScheduler
 ]
 
-{ #category : #modelling }
+{ #category : #accessing }
 SeqNaiveMultiExecutor >> trace [
 	| trace |
 	trace := SeqTrace new.

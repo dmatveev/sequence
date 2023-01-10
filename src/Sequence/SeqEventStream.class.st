@@ -111,15 +111,22 @@ SeqEventStream >> handleAdvanceIdle [
 	self assert: startBlock isNotNil.
 	startBlock value.
 	
-	"After triggering the startBlock (which MUST move us to #ready state),
-	advance the execution to move to #exec (since the actual execution is what
-	expected from advance)"
-	self assert: thisState = #ready.
+	"After triggering the startBlock (which MAY* move us to #ready state via sending
+	#updateFrame:), advance the execution to move to #exec (since the actual execution
+	is what expected from advance)
+	
+	* - After introducing frameDrops, startBlock may include conditional logic where
+	the execution is rejected even if canStartTest was true. Just check it here."
+	self assert: (thisState = #ready or: (thisState = #idle)).
+	
+	thisState = #ready ifFalse: [ ^self. "Don't proceed" ].
+
+	"Otherwise, proceed"
 	startBlockCalled := true. "Mark as called to avoid extra side effects in the next
 	state"
 	"Take the next action immediately if possible. If it is not, it is ok to stay in the
 	#ready state."
-	self canWork ifTrue: [self advance].
+	self canWork ifTrue: [self advance]
 ]
 
 { #category : #private }
