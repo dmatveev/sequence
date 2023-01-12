@@ -11,7 +11,11 @@ Class {
 		'laneHeights',
 		'factor',
 		'yfactor',
-		'showFrameDrops'
+		'showFrameDrops',
+		'showLabels',
+		'border',
+		'colorByFrames',
+		'showOutputLatencies'
 	],
 	#category : #Sequence
 }
@@ -38,13 +42,13 @@ SeqTrace >> addLegend: view [
 	lb
 		beFixedWithTitle: 'Statistics'.
 	sequences do: [ :each |
-		| cntrs completed dropped str dropStr |
+		| cntrs completed dropped dropStr |
 		cntrs := counters at: each.
 		"FIXME: This is a looong time broken for the old Naive executor!"
 		completed := cntrs at: #completedFrames.
 		dropped := cntrs at: #droppedFrames.
 		dropStr := showFrameDrops ifTrue: [ dropped printString, '/' ] ifFalse: [ '' ].
-		str := ' ' join: {
+		lb text: (' ' join: {
 			each name. 'latency avg.:'.
 			"Note: not using #asMilliseconds to keep the .xx fractional part"
 			(cntrs at: #latencyAverage) asMicroseconds / 1000.0.
@@ -53,8 +57,16 @@ SeqTrace >> addLegend: view [
 			'ms, max:'.
 			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
 			'ms,'.
-			'[', dropStr, (dropped + completed) printString, ']'}.
-		lb text: str].
+			'[', dropStr, (dropped + completed) printString, ']'}).
+		showOutputLatencies ifTrue: [
+			lb text: (' ' join: {
+				each name. 'output avg.:'.
+				(cntrs at: #outputAverage) asMicroseconds / 1000.0.
+				'ms, med.:'.
+				(cntrs at: #outputMedian) asMicroseconds / 1000.0.
+				'ms, max:'.
+				(cntrs at: #outputMax) asMicroseconds / 1000.0.
+				'ms' }) ]].
 	lb	build
 ]
 
@@ -82,9 +94,40 @@ SeqTrace >> allLanes [
 		allLanes := wLive contents, wRest contents].
 ]
 
+{ #category : #rendering }
+SeqTrace >> boxFor: ev [
+	| idx w h box  label |
+	idx := self allLanes indexOf: ev lane.
+	w := self widthFor: ev.
+	h := self laneHeights at: idx.
+	box := RSBox new width: w; height: h; color: (self colorFor: ev).
+	w > 1.0 ifTrue: [ box border: border ].
+	ev frame dropped ifTrue: [ box color: (box color alpha: 0.25) ].
+	
+	showLabels ifFalse: [ ^box model: ev; yourself].
+
+	"Create & fit an RSLabel & Composite. FIXME: this IF could happen only once"
+	label := RSLabel new text: (ev block name, ':', ev frame id printString).
+	
+	"Scale it to the proper height"
+	(label textHeight > h) ifTrue: [ label fontSize: h ].
+			
+	"If label width [ still ] exceeds the box, just don't do that."
+	label textWidth > w ifTrue: [ ^box model: ev; yourself ].
+
+	^RSComposite new model: ev; shapes: (RSGroup with: box with: label); yourself
+]
+
+{ #category : #private }
+SeqTrace >> colorByFrames [
+	colorByFrames := true
+]
+
 { #category : #private }
 SeqTrace >> colorFor: anEvent [
-	^self colors scale: (anEvent frame sequence)
+	| f |
+	f := anEvent frame.
+	^self colors scale: (colorByFrames ifTrue: [f hash] ifFalse: [f sequence])
 
 ]
 
@@ -111,6 +154,10 @@ SeqTrace >> initialize [
 	factor := 1000. "1000 for ms scale. Use 1 for usecs for your own risk!"
 	yfactor := 1.
 	showFrameDrops := false.
+	showLabels := false.
+	showOutputLatencies := false.
+	colorByFrames := false.
+	border := RSBorder new color: #veryDarkGray; width: 0.25; yourself.
 ]
 
 { #category : #inspecting }
@@ -176,19 +223,8 @@ SeqTrace >> positionFor: anEvent [
 
 { #category : #rendering }
 SeqTrace >> renderOn: view [ 
-	| es b |
-	b := RSBorder new color: #veryDarkGray; width: 0.25; yourself.
-	es := self allEvents collect: [ :ev || idx w box |
-		idx := self allLanes indexOf: ev lane.
-		w := self widthFor: ev.
-		box := RSBox new
-			width: w;
-			height: (self laneHeights at: idx);
-			color: (self colorFor: ev);
-			model: ev.
-		w > 1.0 ifTrue: [ box border: b ].
-		ev frame dropped ifTrue: [ box color: (box color alpha: 0.25) ].
-		box].
+	| es |
+	es := self allEvents collect: [ :ev | self boxFor: ev].
 	es do: [ :each | each translateTo: (self positionFor: each model) ].
 	view addAll: es.
 	self addLegend: view.
@@ -206,6 +242,16 @@ SeqTrace >> sequence: aSequence [
 { #category : #setup }
 SeqTrace >> showFrameDrops [
 	showFrameDrops := true.
+]
+
+{ #category : #setup }
+SeqTrace >> showLabels [
+	showLabels := true
+]
+
+{ #category : #setup }
+SeqTrace >> showOutputLatencies [
+	showOutputLatencies := true.
 ]
 
 { #category : #accessors }

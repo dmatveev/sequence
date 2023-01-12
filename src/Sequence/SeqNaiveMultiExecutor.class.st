@@ -27,9 +27,12 @@ SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
 	"FIXME: Sheer ugliness."
 	seqExecOptions sequence: aSequence.
 	
-	"Add stream(s) associated with the sequence to the executor."
+	"Short-cut: if pipelineing option is selected, add it this way"
 	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
+	(seqExecOptions hasPipeliningEnabled and: (opBlocks size > 1)) ifTrue: [ ^self addPipeline: aSequence topoSorted options: seqExecOptions ].
+
+	"Add stream(s) associated with the sequence to the executor."
 	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock options: seqExecOptions ].
 	(firstBlock isLive and: opBlocks isNotEmpty) ifTrue: [ ^self addLiveStream: firstBlock withOpStream: opBlocks options: seqExecOptions ].
 	firstBlock isLive ifFalse: [ ^self addOpStream: aSequence topoSorted options: seqExecOptions ].
@@ -110,9 +113,8 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 	blockStream := SeqEventStream on: opBlocks.
 	blockStream
 		canStartTest: [ pendingFrames isEmpty not ];
-		onStart: [seqExecOptions framePolicy
-			handleStart: blockStream exec: self pending: pendingFrames ];
-		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
+		onStart: [seqExecOptions framePolicy handleStart: blockStream exec: self pending: pendingFrames ];
+		onComplete: [ self registerCompleted: anInputStream sequence on: blockStream thisFrame at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.
 ]
@@ -131,10 +133,69 @@ SeqNaiveMultiExecutor >> addOpStream: opBlocks options: seqBlockOptions [
 			frame := anInputStream next.
 			frame timestamp: elapsed. "FIXME: or currentTime?"
 			blockStream updateFrame: frame.
-			self registerStarted: anInputStream sequence at: blockStream currentTime ];
-		onComplete: [ self registerCompleted: anInputStream sequence at: blockStream currentTime ];
+			self registerStarted: anInputStream sequence on: frame at: blockStream currentTime ];
+		onComplete: [ self registerCompleted: anInputStream sequence on: blockStream thisFrame at: blockStream currentTime ];
 		priority: aNumber.
 	streams add: blockStream.
+]
+
+{ #category : #private }
+SeqNaiveMultiExecutor >> addPipeline: allBlocks options: seqExecOptions [
+	| inputFrame liveStream pendingInputFrames firstBlockStream lastBlockStream mailbox |
+	
+	"Validate if we can support this case. So far the support is fairly limited (only linked-list-like
+	pipeliens)"
+	allBlocks first isLive ifFalse: [ SeqLiveSourceMustBeFirst new signal ].
+	allBlocks do: [ :each | (each producers size > 1 or: (each consumers size > 1))
+		ifTrue: [ self error: 'Only linked-list-like sequences supported for pipelining simulation' ] ]. "FIXME: Exception!"
+		
+	"Set-up the live stream first."
+	"NOTE: This is an exact copy of other addLive... options"
+	pendingInputFrames := DoubleLinkedList new.
+	liveStream := SeqEventStream with: allBlocks first.
+	liveStream
+		canStartTest: [ true ];
+		onStart: [
+			inputFrame := seqExecOptions inputStream next.
+			inputFrame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
+			liveStream updateFrame: inputFrame ];
+		onComplete: [ 
+			inputFrame availableSince: liveStream currentTime. "FIXME: Must be propagated to other #add:"
+			pendingInputFrames add: inputFrame ];
+		priority: seqExecOptions priority.
+	streams add: liveStream.
+	
+	"Initialize mailboxes... A dumb way to communicate between pipeline steps"
+	mailbox := Dictionary new.
+	allBlocks allButFirst do: [ :each | mailbox at: each put: nil ].
+	
+	"Set-up the first operation then. Note: it is special as it drops frames."
+	firstBlockStream := SeqEventStream with: allBlocks second.
+	firstBlockStream
+		canStartTest: [ pendingInputFrames isEmpty not and: (mailbox at: allBlocks second consumers anyOne) isNil ];
+		onStart:      [ seqExecOptions framePolicy handleStart: firstBlockStream exec: self pending: pendingInputFrames ];
+		onComplete:   [ mailbox at: allBlocks second consumers anyOne put: firstBlockStream thisFrame ];
+		priority: seqExecOptions priority.
+	streams add: firstBlockStream.
+	
+	"Set-up interim operations"
+	streams addAll: ((allBlocks copyFrom: 3 to: allBlocks size - 1) collect: [ :each || workerStream |
+		workerStream := SeqEventStream with: each.
+		workerStream 
+			canStartTest: [ (mailbox at: each) isNotNil and: (mailbox at: each consumers anyOne) isNil ];
+			onStart:      [ workerStream updateFrame: (mailbox at: each). mailbox at: each put: nil ];
+			onComplete:   [ mailbox at: each consumers anyOne put: workerStream thisFrame ];
+			priority: seqExecOptions priority;
+			yourself]).
+
+	"Set-up the last (completer) stream"
+	lastBlockStream := SeqEventStream with: allBlocks last.
+	lastBlockStream
+		canStartTest: [ (mailbox at: allBlocks last) isNotNil ];
+		onStart:      [ lastBlockStream updateFrame: (mailbox at: allBlocks last). mailbox at: allBlocks last put: nil. ];
+		onComplete:   [ self registerCompleted: seqExecOptions sequence on: lastBlockStream thisFrame at: lastBlockStream currentTime  ];
+		priority: seqExecOptions priority.
+	streams add: lastBlockStream.
 ]
 
 { #category : #private }

@@ -7,8 +7,9 @@ Class {
 { #category : #testing }
 SecExecFrameHandleAll >> handleStart: blockStream exec: aSeqExecutor pending: pendingFrames [
 	"Just take next frame to process and proceed"
-
-	blockStream updateFrame: pendingFrames first.
+	| frame |
+	frame := pendingFrames first.
+	blockStream updateFrame: frame.
 	pendingFrames removeFirst.
-	aSeqExecutor registerStarted: sequence at: blockStream currentTime
+	aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime
 ]

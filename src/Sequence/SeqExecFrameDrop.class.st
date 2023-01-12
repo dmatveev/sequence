@@ -16,8 +16,9 @@ SeqExecFrameDrop >> handleStart: blockStream exec: aSeqExecutor pending: pending
 		ifFalse: [
 			pendingFrames last markDropped. "Late for this too. Drop & do nothing"
 			aSeqExecutor registerDropped: sequence ] 
-		ifTrue: [ 
-			blockStream updateFrame: pendingFrames last.
-			aSeqExecutor registerStarted: sequence at: blockStream currentTime ].
+		ifTrue: [ | frame |
+			frame := pendingFrames last.
+			blockStream updateFrame: frame.
+			aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime ].
 	pendingFrames removeAll
 ]

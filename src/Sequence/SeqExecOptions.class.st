@@ -12,7 +12,8 @@ Class {
 		'inputStream',
 		'allowFrameDrop',
 		'sequence',
-		'framePolicy'
+		'framePolicy',
+		'usePipelining'
 	],
 	#category : #Sequence
 }
@@ -39,10 +40,16 @@ SeqExecOptions >> hasFrameDropAllowed [
 	^allowFrameDrop
 ]
 
+{ #category : #testing }
+SeqExecOptions >> hasPipeliningEnabled [
+	^usePipelining
+]
+
 { #category : #'as yet unclassified' }
 SeqExecOptions >> initialize [
 	super initialize.
 	allowFrameDrop := false.
+	usePipelining := false.
 	priority := 0.
 ]
 
@@ -72,6 +79,11 @@ SeqExecOptions >> priority: anObject [
 	priority := anObject
 ]
 
+{ #category : #accessing }
+SeqExecOptions >> sequence [
+	^ sequence
+]
+
 { #category : #'as yet unclassified' }
 SeqExecOptions >> sequence: aSequence [ 
 	"TODO: This is a huge abstraction leak here: a sequence is required for input Stream!"
@@ -80,4 +92,9 @@ SeqExecOptions >> sequence: aSequence [
 	self assert: framePolicy isNil. "FIXME: Same may apply to inputStream too, but that's a mess"
 
 	sequence := aSequence.
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> usePipelining [
+	usePipelining := true
 ]

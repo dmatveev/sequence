@@ -211,6 +211,11 @@ SeqEventStream >> seqBlocks: aCollection [
 ]
 
 { #category : #attributes }
+SeqEventStream >> thisFrame [
+	^thisFrame
+]
+
+{ #category : #attributes }
 SeqEventStream >> updateFrame: aSeqFrame [
 	| blocksForFrame |
 	
