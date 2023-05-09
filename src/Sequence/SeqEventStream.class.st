@@ -14,7 +14,8 @@ Class {
 		'seqBlocks',
 		'canStartBlock',
 		'startBlockCalled',
-		'priority'
+		'priority',
+		'sched'
 	],
 	#category : #Sequence
 }
@@ -69,10 +70,10 @@ SeqEventStream >> canWork [
 	thisState = #idle ifTrue: [ ^canStartBlock ifNil: [ false ] ifNotNil: canStartBlock ].
 
 	"In #ready state, we can work if the current block can lock its target. Note there's no thisBlock yet"
-	thisState = #ready ifTrue: [ ^blockStream peek target canLock: blockStream peek ].
+	thisState = #ready ifTrue: [ ^self targetIsAvailable ].
 	
 	"In #exec state, we can work if: thisBlock is already locked (leave it) OR it can lock (enter it)"
-	thisState = #exec ifTrue: [ ^thisToken isNotNil or: [ blockStream peek target canLock: blockStream peek ]].
+	thisState = #exec ifTrue: [ ^thisToken isNotNil or: [ self targetIsAvailable ]].
 	
 	"...in all other cases."
 	self error: 'Unhandled state'.
@@ -195,6 +196,10 @@ SeqEventStream >> printOn: aStream [
 
 { #category : #modelling }
 SeqEventStream >> priority [
+	"NOTE: Is this an abstraction leak? Other execution options are not
+	associated with Streams, but are part of ExecOptions.
+	However, #priority is used by SeqPriorityRRScheduler now when selecting
+	which stream to run next."
 	^priority ifNil: [ 0 ]
 ]
 
@@ -204,10 +209,34 @@ SeqEventStream >> priority: anInteger [
 ]
 
 { #category : #attributes }
+SeqEventStream >> scheduler: anObject [
+	sched := anObject
+]
+
+{ #category : #attributes }
 SeqEventStream >> seqBlocks: aCollection [ 
 	"Note: this method remembers a collection of blocks but doesn't form an execution stream.
 	The execution stream is formed when there's a frame passed"
 	seqBlocks := aCollection
+]
+
+{ #category : #attributes }
+SeqEventStream >> targetIsAvailable [
+	"Answers if the current block can enter its execution target.
+	Used only in #canWork (in #ready and #exec states)"
+	
+	| nextBlock |
+	nextBlock := blockStream peek.
+	
+	^sched
+		ifNil: [ nextBlock target canLock: nextBlock ]
+		ifNotNil: [ | can |
+			can := nextBlock target canLock: nextBlock inContextOf: self managedBy: sched.
+
+			"If the target was not available right now, inform scheduler there is a process waiting for that.
+			NB.: Maybe with 'target queues' concept it would be easier to implement"
+			can ifFalse: [ sched waitlist: self to: nextBlock target ].
+			can ]
 ]
 
 { #category : #attributes }

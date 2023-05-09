@@ -65,6 +65,16 @@ SeqEvent >> lane: anObject [
 	lane := anObject
 ]
 
+{ #category : #accessing }
+SeqEvent >> printOn: aStream [
+	startTime printOn: aStream.
+	aStream
+		nextPutAll: ' - ';
+		nextPutAll: block name;
+	   nextPutAll: ' #'.
+	frame id printOn: aStream.
+]
+
 { #category : #accessors }
 SeqEvent >> seqBlock [
 	^block

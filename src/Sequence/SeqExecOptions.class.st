@@ -13,7 +13,8 @@ Class {
 		'allowFrameDrop',
 		'sequence',
 		'framePolicy',
-		'usePipelining'
+		'usePipelining',
+		'mailboxSize'
 	],
 	#category : #Sequence
 }
@@ -51,6 +52,7 @@ SeqExecOptions >> initialize [
 	allowFrameDrop := false.
 	usePipelining := false.
 	priority := 0.
+	mailboxSize := 1.
 ]
 
 { #category : #accessing }
@@ -65,6 +67,16 @@ SeqExecOptions >> inputStream [
 SeqExecOptions >> inputStream: anObject [
 
 	inputStream := anObject
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> mailboxSize [
+	^mailboxSize
+]
+
+{ #category : #accessing }
+SeqExecOptions >> mailboxSize: aNumber [
+	mailboxSize := aNumber
 ]
 
 { #category : #accessing }

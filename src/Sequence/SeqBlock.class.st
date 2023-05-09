@@ -11,7 +11,8 @@ Class {
 		'taskBlock',
 		'jobBlock',
 		'latencyBlock',
-		'isLive'
+		'isLive',
+		'streams'
 	],
 	#category : #Sequence
 }
@@ -149,6 +150,16 @@ SeqBlock >> producers [
 { #category : #'accessing-testing' }
 SeqBlock >> produces: aSeqBlock [
 	^self consumers includes: aSeqBlock
+]
+
+{ #category : #'as yet unclassified' }
+SeqBlock >> streams [
+	^streams ifNil: [ 1 ]
+]
+
+{ #category : #'as yet unclassified' }
+SeqBlock >> streams: anInteger [ 
+	streams := anInteger
 ]
 
 { #category : #accessors }

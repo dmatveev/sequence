@@ -85,7 +85,8 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock options: seqExecOptions [
 			frame timestamp: elapsed. "FIXME: Shouldn't this be liveStream currentTime as in below?"
 			liveStream updateFrame: frame ];
 		onComplete: [];
-		priority: aNumber.
+		priority: aNumber;
+		scheduler: self scheduler.
 	streams add: liveStream.
 ]
 
@@ -107,7 +108,8 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 		onComplete: [ 
 			frame availableSince: liveStream currentTime. "FIXME: Must be propagated to other #add:"
 			pendingFrames add: frame ];
-		priority: aNumber.
+		priority: aNumber;
+		scheduler: self scheduler.
 	streams add: liveStream.
 	
 	blockStream := SeqEventStream on: opBlocks.
@@ -115,7 +117,8 @@ SeqNaiveMultiExecutor >> addLiveStream: aLiveBlock withOpStream: opBlocks option
 		canStartTest: [ pendingFrames isEmpty not ];
 		onStart: [seqExecOptions framePolicy handleStart: blockStream exec: self pending: pendingFrames ];
 		onComplete: [ self registerCompleted: anInputStream sequence on: blockStream thisFrame at: blockStream currentTime ];
-		priority: aNumber.
+		priority: aNumber;
+		scheduler: self scheduler.
 	streams add: blockStream.
 ]
 
@@ -135,13 +138,14 @@ SeqNaiveMultiExecutor >> addOpStream: opBlocks options: seqBlockOptions [
 			blockStream updateFrame: frame.
 			self registerStarted: anInputStream sequence on: frame at: blockStream currentTime ];
 		onComplete: [ self registerCompleted: anInputStream sequence on: blockStream thisFrame at: blockStream currentTime ];
-		priority: aNumber.
+		priority: aNumber;
+		scheduler: self scheduler.
 	streams add: blockStream.
 ]
 
 { #category : #private }
 SeqNaiveMultiExecutor >> addPipeline: allBlocks options: seqExecOptions [
-	| inputFrame liveStream pendingInputFrames firstBlockStream lastBlockStream mailbox |
+	| inputFrame liveStream pendingInputFrames mail |
 	
 	"Validate if we can support this case. So far the support is fairly limited (only linked-list-like
 	pipeliens)"
@@ -162,40 +166,49 @@ SeqNaiveMultiExecutor >> addPipeline: allBlocks options: seqExecOptions [
 		onComplete: [ 
 			inputFrame availableSince: liveStream currentTime. "FIXME: Must be propagated to other #add:"
 			pendingInputFrames add: inputFrame ];
-		priority: seqExecOptions priority.
+		priority: seqExecOptions priority;
+		scheduler: self scheduler.
 	streams add: liveStream.
 	
 	"Initialize mailboxes... A dumb way to communicate between pipeline steps"
-	mailbox := Dictionary new.
-	allBlocks allButFirst do: [ :each | mailbox at: each put: nil ].
+	mail := Dictionary new.
+	allBlocks allButFirst do: [ :each | mail at: each put: (SeqMailbox options: seqExecOptions) ].
 	
-	"Set-up the first operation then. Note: it is special as it drops frames."
+	"Set-up the first operation then. Note: it is special as it may drop frames."
+	allBlocks second streams timesRepeat: [ | firstBlockStream | 
 	firstBlockStream := SeqEventStream with: allBlocks second.
 	firstBlockStream
-		canStartTest: [ pendingInputFrames isEmpty not and: (mailbox at: allBlocks second consumers anyOne) isNil ];
+		canStartTest: [ pendingInputFrames isEmpty not and: (mail at: allBlocks second consumers anyOne) hasFreeSpace ];
 		onStart:      [ seqExecOptions framePolicy handleStart: firstBlockStream exec: self pending: pendingInputFrames ];
-		onComplete:   [ mailbox at: allBlocks second consumers anyOne put: firstBlockStream thisFrame ];
-		priority: seqExecOptions priority.
-	streams add: firstBlockStream.
+		onComplete:   [ (mail at: allBlocks second consumers anyOne) put: firstBlockStream thisFrame ];
+			"FIXME: There may be race between instances (data overwritten before read). Fortunately #put: handles collision"
+		priority: seqExecOptions priority;
+		scheduler: self scheduler.
+	streams add: firstBlockStream].
 	
 	"Set-up interim operations"
-	streams addAll: ((allBlocks copyFrom: 3 to: allBlocks size - 1) collect: [ :each || workerStream |
+	streams addAll: ((allBlocks copyFrom: 3 to: allBlocks size - 1) collect: [ :each |
+		(1 to: each streams) collect: [:u || workerStream |
 		workerStream := SeqEventStream with: each.
 		workerStream 
-			canStartTest: [ (mailbox at: each) isNotNil and: (mailbox at: each consumers anyOne) isNil ];
-			onStart:      [ workerStream updateFrame: (mailbox at: each). mailbox at: each put: nil ];
-			onComplete:   [ mailbox at: each consumers anyOne put: workerStream thisFrame ];
+			canStartTest: [ (mail at: each) hasContent and: (mail at: each consumers anyOne) hasFreeSpace ];
+			onStart:      [ workerStream updateFrame: (mail at: each) takeOne ];
+			onComplete:   [ (mail at: each consumers anyOne) put: workerStream thisFrame ];
+				"FIXME: There may be race between instances (data overwritten before read). Fortunately #put: handles collision"
 			priority: seqExecOptions priority;
-			yourself]).
+			scheduler: self scheduler;
+			yourself]]) flattened. "FIMXE: Refactor!!!"
 
 	"Set-up the last (completer) stream"
+	allBlocks last streams timesRepeat: [ | lastBlockStream |
 	lastBlockStream := SeqEventStream with: allBlocks last.
 	lastBlockStream
-		canStartTest: [ (mailbox at: allBlocks last) isNotNil ];
-		onStart:      [ lastBlockStream updateFrame: (mailbox at: allBlocks last). mailbox at: allBlocks last put: nil. ];
+		canStartTest: [ (mail at: allBlocks last) hasContent ];
+		onStart:      [ lastBlockStream updateFrame: (mail at: allBlocks last) takeOne. ];
 		onComplete:   [ self registerCompleted: seqExecOptions sequence on: lastBlockStream thisFrame at: lastBlockStream currentTime  ];
-		priority: seqExecOptions priority.
-	streams add: lastBlockStream.
+		priority: seqExecOptions priority;
+		scheduler: self scheduler.
+	streams add: lastBlockStream].
 ]
 
 { #category : #private }
@@ -248,7 +261,9 @@ SeqNaiveMultiExecutor >> scheduler [
 
 { #category : #configuration }
 SeqNaiveMultiExecutor >> scheduler: aScheduler [
-	scheduler := aScheduler
+	scheduler := aScheduler.
+	"If streams have been added already, propagate a new one down to them"
+	streams do: [ :each | each scheduler: aScheduler ]
 ]
 
 { #category : #accessing }

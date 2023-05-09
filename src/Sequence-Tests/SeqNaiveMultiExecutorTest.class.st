@@ -153,7 +153,7 @@ SeqNaiveMultiExecutorTest >> testStreamsCompetingShouldShareResource [
 	self assert: liveLanes first  events size equals: 9. "One of the sources"
 	self assert: liveLanes second events size equals: 9. "Another of the sources".
 	
-	seq1Evs := opLanes first  events select: [ :each | each frame sequence == seq1 ].
+	seq1Evs := opLanes first events select: [ :each | each frame sequence == seq1 ].
 	seq2Evs := opLanes first events select: [ :each | each frame sequence == seq2 ].
 	self assert: seq1Evs size equals: 5.
 	self assert: seq2Evs size equals: 4.

@@ -1,8 +1,31 @@
 Class {
 	#name : #SeqPriorityRRScheduler,
 	#superclass : #SeqRoundRobinScheduler,
+	#instVars : [
+		'waitlist'
+	],
 	#category : #Sequence
 }
+
+{ #category : #'as yet unclassified' }
+SeqPriorityRRScheduler >> askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlock [ 
+	"The logic here must be simple:
+	- A stream wants to lock a resource.
+	- If there's no higher-priority streams wait-listed, let's give the permission.
+	- Otherwise [...some more complex logic may be here...] reject -- keep it for the higher priority one"
+	
+	"NOTE: There may be also a stream of the same priority but waiting too long... It is not handled right now"
+	| wl |
+	wl := self waitlistOn: aSeqTarget.
+		
+	wl detect: [ :s | s priority > aSeqEventStream priority ]
+		ifFound: [ :s | ^false ].
+		
+	"If this stream is itself in the waitlist, remove it"
+	"FIXME: MAYBE this is not the right place to do that, since ask != actually lock"
+	(wl includes: aSeqEventStream) ifTrue: [ wl remove: aSeqEventStream ].
+	^true		
+]
 
 { #category : #'as yet unclassified' }
 SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
@@ -24,14 +47,13 @@ SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
 	frontRow := aSortedCollectionOfStreams select: [ :each | each nextTick = earliest ].
 	frontRow do: [ :stream | stream wantsToLeave ifTrue: [ ^self markDecision: stream ]].
 	
-	"So nobody wants to release in the FRONT ROW.. 	Will have to figure out what's with
-	what's with the resources. And what are our resources, anyway? Those are targets.
+	"So nobody wants to release in the FRONT ROW.. 	Will have to figure out the resource situation.
+	And what are our resources, anyway? Those are targets.
 	And we need to see if there's any competition for a target."
 	targetDemand := Dictionary new.
 	frontRow do: [ :stream |
 		stream blockToWork ifNotNil: [ :block |
-			(targetDemand at: block target ifAbsentPut: [ OrderedCollection new ])
-				add: stream]].
+			(targetDemand at: block target ifAbsentPut: [ OrderedCollection new ]) add: stream]].
 	
 	"Note there may be multiple targets under pressure.. We pick a stream at time anyway.
 	Then we could revisit other occurences on the next tick. Or not (if situation changes
@@ -47,4 +69,20 @@ SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
 	NB: Priorities should be kept in mind here too."
 	frontRowTop := (frontRow collect: [:each | each priority]) max.
 	^self markDecision: (self selectRR: (frontRow select: [:each | each priority = frontRowTop])).
+]
+
+{ #category : #'as yet unclassified' }
+SeqPriorityRRScheduler >> initialize [
+	super initialize.
+	waitlist := Dictionary new
+]
+
+{ #category : #'as yet unclassified' }
+SeqPriorityRRScheduler >> waitlist: aSeqEventStream to: aSeqTarget [ 
+	(self waitlistOn: aSeqTarget) add: aSeqEventStream
+]
+
+{ #category : #'as yet unclassified' }
+SeqPriorityRRScheduler >> waitlistOn: aSeqTarget [
+	^waitlist at: aSeqTarget ifAbsentPut:  [ Set new ]	
 ]
