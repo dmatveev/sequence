@@ -113,6 +113,11 @@ Sequence >> renderOn: view [
 	view @ RSCanvasController 
 ]
 
+{ #category : #modelling }
+Sequence >> runFor: aDuration [ 
+	^self runFor: aDuration using: SeqNaiveExecutor
+]
+
 { #category : #model }
 Sequence >> runFor: aDuration using: aSchedulerClass [
 	^self
@@ -122,15 +127,16 @@ Sequence >> runFor: aDuration using: aSchedulerClass [
 ]
 
 { #category : #model }
-Sequence >> runFor: aDuration using: aSchedulerClass on: aDataStreamOrBlock [
+Sequence >> runFor: aDuration using: anExecutorClass on: aDataStreamOrBlock [
 	|  scheduler |
-	scheduler := aSchedulerClass new
+	scheduler := anExecutorClass new
 		sequence: self;
 		input: (SeqFrameSource using: aDataStreamOrBlock);
 		yourself.
 	scheduler runFor: aDuration.
-	^(SeqTrace on: self)
-		numFrames: scheduler completedFrames;
+	^SeqTrace new
+		add: self over: (scheduler counters: self);
+		showLabels;
 		yourself
 ]
 

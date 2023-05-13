@@ -2,7 +2,6 @@ Class {
 	#name : #SeqNaiveExecutor,
 	#superclass : #SeqMonoExecutor,
 	#instVars : [
-		'completedFrames',
 		'frame',
 		'elapsed'
 	],
@@ -11,14 +10,13 @@ Class {
 
 { #category : #accessing }
 SeqNaiveExecutor >> completedFrames [
-	^completedFrames
+	^completedFrames at: sequence
 ]
 
 { #category : #accessing }
 SeqNaiveExecutor >> initialize [
 	super initialize.
 	elapsed := 0 seconds.
-	completedFrames := 0.
 ]
 
 { #category : #accessing }
@@ -31,11 +29,12 @@ SeqNaiveExecutor >> runDumbFor: aDuration [
 	nextFrameBlock := [ 
 		frame := self input next.
 		frame timestamp: elapsed.
-		blockStream updateFrame: frame].
+		blockStream updateFrame: frame.
+		self registerStarted: sequence on: frame at: blockStream currentTime ].
 	blockStream
 		canStartTest: [ true ];
 		onStart: nextFrameBlock;
-		onComplete: [ completedFrames := completedFrames + 1 ].
+		onComplete: [ self registerCompleted: sequence on: blockStream thisFrame at: blockStream currentTime ].
 	self runEventStreams: {blockStream} for: aDuration.
 
 ]
@@ -75,7 +74,8 @@ SeqNaiveExecutor >> runLiveFor: aDuration [
 		onStart: [
 			frame := self input next.
 			frame timestamp: elapsed.
-			liveStream updateFrame: frame ];
+			liveStream updateFrame: frame.
+			self registerStarted: sequence on: frame at: liveStream currentTime ];
 		onComplete: [ pendingFrames add: frame ].
 	streams add: liveStream.
 	opBlocks ifNotEmpty: [ 
@@ -85,11 +85,11 @@ SeqNaiveExecutor >> runLiveFor: aDuration [
 			onStart: [
 				blockStream updateFrame: pendingFrames first.
 				pendingFrames removeFirst ];
-			onComplete: [ completedFrames := completedFrames + 1 ].
+			onComplete: [ self registerCompleted: sequence on: blockStream thisFrame at: blockStream currentTime ].
 		streams add: blockStream].
 	self runEventStreams: streams for: aDuration.
 
-	"FIXME: Ugly kludge"
-	opBlocks ifEmpty: [ completedFrames := pendingFrames asArray size ].
+	"FIXME: Ugly kludge -- (upd) and I don't remember the reason"
+	opBlocks ifEmpty: [ completedFrames at: sequence put: pendingFrames asArray size ].
 
 ]

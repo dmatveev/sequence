@@ -30,5 +30,6 @@ SeqMonoExecutor >> sequence [
 
 { #category : #accessing }
 SeqMonoExecutor >> sequence: anObject [
-	sequence := anObject
+	sequence := anObject.
+	self register: anObject
 ]

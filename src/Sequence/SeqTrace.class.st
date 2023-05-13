@@ -46,7 +46,7 @@ SeqTrace >> addLegend: view [
 		cntrs := counters at: each.
 		"FIXME: This is a looong time broken for the old Naive executor!"
 		completed := cntrs at: #completedFrames.
-		dropped := cntrs at: #droppedFrames.
+		dropped := cntrs at: #droppedFrames ifAbsent: [0]. "FIXME: Mono schedulers don't put #droppedFrames"
 		dropStr := showFrameDrops ifTrue: [ dropped printString, '/' ] ifFalse: [ '' ].
 		lb text: (' ' join: {
 			each name. 'latency avg.:'.
@@ -199,7 +199,7 @@ SeqTrace >> laneYs [
 SeqTrace >> numFrames [
 	"Aux method. Should be called for Mono case only"
 	self assert: sequences size = 1.
-	^counters at: sequences first
+	^counters at: sequences first at: #completedFrames
 ]
 
 { #category : #setup }
