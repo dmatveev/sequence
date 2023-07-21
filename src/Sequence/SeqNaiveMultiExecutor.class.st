@@ -61,6 +61,14 @@ SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock [
 ]
 
 { #category : #compatibility }
+SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock options: options [
+	"Yen another short-cut"
+	options
+		inputStream: (SeqFrameSource using: anInputStreamBlock for: aSequence).
+	^self add: aSequence options: options. 
+]
+
+{ #category : #compatibility }
 SeqNaiveMultiExecutor >> add: aSequence with: anInputStreamBlock priority: aPriority [
 	| options |
 	options := SeqExecOptions new.
@@ -272,5 +280,6 @@ SeqNaiveMultiExecutor >> trace [
 	trace := SeqTrace new.
 	"FIXME: The below construction is not that classy"
 	sequences do: [ :seq | trace add: seq over: (self counters: seq) ].
+	trace showLabels.
 	^trace
 ]

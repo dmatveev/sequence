@@ -118,6 +118,11 @@ Sequence >> runFor: aDuration [
 	^self runFor: aDuration using: SeqNaiveExecutor
 ]
 
+{ #category : #modelling }
+Sequence >> runFor: aDuration on: aFullBlockClosure [ 
+	^self runFor: aDuration using: SeqNaiveExecutor on: aFullBlockClosure
+]
+
 { #category : #model }
 Sequence >> runFor: aDuration using: aSchedulerClass [
 	^self
