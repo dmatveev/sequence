@@ -15,7 +15,9 @@ Class {
 		'showLabels',
 		'border',
 		'colorByFrames',
-		'showOutputLatencies'
+		'showOutputLatencies',
+		'showUtilization',
+		'lanesToShow'
 	],
 	#category : #Sequence
 }
@@ -67,6 +69,9 @@ SeqTrace >> addLegend: view [
 				'ms, max:'.
 				(cntrs at: #outputMax) asMicroseconds / 1000.0.
 				'ms' }) ]].
+	showUtilization ifTrue: [ 
+		(lanesToShow ifNil: [allLanes]) do: [ :lane |
+			lb text: (' ' join: { 'Lane'. lane hash. ':'. lane utilization }) ] ].
 	lb	build
 ]
 
@@ -156,6 +161,7 @@ SeqTrace >> initialize [
 	showFrameDrops := false.
 	showLabels := false.
 	showOutputLatencies := false.
+	showUtilization := false.
 	colorByFrames := false.
 	border := RSBorder new color: #veryDarkGray; width: 0.25; yourself.
 ]
@@ -252,6 +258,17 @@ SeqTrace >> showLabels [
 { #category : #setup }
 SeqTrace >> showOutputLatencies [
 	showOutputLatencies := true.
+]
+
+{ #category : #setup }
+SeqTrace >> showUtilization [
+	showUtilization := true.
+]
+
+{ #category : #setup }
+SeqTrace >> showUtilization: anArray [
+	showUtilization := true.
+	lanesToShow := anArray.
 ]
 
 { #category : #accessors }
