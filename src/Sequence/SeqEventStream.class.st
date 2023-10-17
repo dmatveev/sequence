@@ -235,7 +235,7 @@ SeqEventStream >> targetIsAvailable [
 
 			"If the target was not available right now, inform scheduler there is a process waiting for that.
 			NB.: Maybe with 'target queues' concept it would be easier to implement"
-			can ifFalse: [ sched waitlist: self to: nextBlock target ].
+			can ifFalse: [ nextBlock target waitlist: self ].
 			can ]
 ]
 

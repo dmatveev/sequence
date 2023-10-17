@@ -1,9 +1,6 @@
 Class {
 	#name : #SeqPriorityRRScheduler,
 	#superclass : #SeqRoundRobinScheduler,
-	#instVars : [
-		'waitlist'
-	],
 	#category : #Sequence
 }
 
@@ -14,9 +11,11 @@ SeqPriorityRRScheduler >> askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlo
 	- If there's no higher-priority streams wait-listed, let's give the permission.
 	- Otherwise [...some more complex logic may be here...] reject -- keep it for the higher priority one"
 	
-	"NOTE: There may be also a stream of the same priority but waiting too long... It is not handled right now"
+	"NOTE: There may be also a stream of the same priority but waiting too long... It is not handled right now
+	GRAND FIXME: {{{
+	Now this code is altering object it doesn't own - waitlist is pushed to the SeqTarget"
 	| wl |
-	wl := self waitlistOn: aSeqTarget.
+	wl := aSeqTarget waitlist.
 		
 	wl detect: [ :s | s priority > aSeqEventStream priority ]
 		ifFound: [ :s | ^false ].
@@ -24,7 +23,8 @@ SeqPriorityRRScheduler >> askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlo
 	"If this stream is itself in the waitlist, remove it"
 	"FIXME: MAYBE this is not the right place to do that, since ask != actually lock"
 	(wl includes: aSeqEventStream) ifTrue: [ wl remove: aSeqEventStream ].
-	^true		
+	^true	
+	"GRAND FIXME: }}}"
 ]
 
 { #category : #'as yet unclassified' }
@@ -69,20 +69,4 @@ SeqPriorityRRScheduler >> decide: aSortedCollectionOfStreams [
 	NB: Priorities should be kept in mind here too."
 	frontRowTop := (frontRow collect: [:each | each priority]) max.
 	^self markDecision: (self selectRR: (frontRow select: [:each | each priority = frontRowTop])).
-]
-
-{ #category : #'as yet unclassified' }
-SeqPriorityRRScheduler >> initialize [
-	super initialize.
-	waitlist := Dictionary new
-]
-
-{ #category : #'as yet unclassified' }
-SeqPriorityRRScheduler >> waitlist: aSeqEventStream to: aSeqTarget [ 
-	(self waitlistOn: aSeqTarget) add: aSeqEventStream
-]
-
-{ #category : #'as yet unclassified' }
-SeqPriorityRRScheduler >> waitlistOn: aSeqTarget [
-	^waitlist at: aSeqTarget ifAbsentPut:  [ Set new ]	
 ]

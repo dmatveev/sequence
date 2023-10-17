@@ -14,8 +14,3 @@ SeqScheduler >> askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlock [
 SeqScheduler >> decide: aCollectionOfStreams [
 	self subclassResponsibility
 ]
-
-{ #category : #'as yet unclassified' }
-SeqScheduler >> waitlist: aSeqEventStream to: aSeqTarget [ 
-	"Do nothing by default."
-]

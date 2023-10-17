@@ -5,7 +5,8 @@ Class {
 		'lanes',
 		'execLanes',
 		'lockedLanes',
-		'name'
+		'name',
+		'waitlist'
 	],
 	#category : #Sequence
 }
@@ -52,6 +53,7 @@ SeqTarget >> initialize [
 	 due to extra execLanes initialization (see #lanes:)"
 	self lanes: 1.
 	lockedLanes := Dictionary new.
+	waitlist := Set new.
 ]
 
 { #category : #accessing }
@@ -100,4 +102,14 @@ SeqTarget >> tryLock: aSeqBlock at: aDuration inContextOf: aFrame [
 	token := SeqLock with: aSeqBlock.
 	lockedLanes at: token put: toLock.
 	^token.
+]
+
+{ #category : #'as yet unclassified' }
+SeqTarget >> waitlist [
+	^waitlist
+]
+
+{ #category : #'as yet unclassified' }
+SeqTarget >> waitlist: aSeqEventStream [ 
+	waitlist add: aSeqEventStream
 ]
