@@ -9,6 +9,9 @@ SeqExecFrameDrop >> handleStart: blockStream exec: aSeqExecutor pending: pending
 	"Implement simple frame-dropping right here, if needed.				
 	If there's > 1 frame, mark all but last as dropped already."
 	
+	| wouldStart |
+	wouldStart := false.
+	
 	pendingFrames asArray allButLastDo: [ :each |
 		each markDropped.
 		aSeqExecutor registerDropped: sequence ].
@@ -19,6 +22,8 @@ SeqExecFrameDrop >> handleStart: blockStream exec: aSeqExecutor pending: pending
 		ifTrue: [ | frame |
 			frame := pendingFrames last.
 			blockStream updateFrame: frame.
-			aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime ].
-	pendingFrames removeAll
+			aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime.
+			wouldStart := true ].
+	pendingFrames removeAll.
+	^wouldStart
 ]

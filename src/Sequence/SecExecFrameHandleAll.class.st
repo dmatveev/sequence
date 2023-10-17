@@ -11,5 +11,6 @@ SecExecFrameHandleAll >> handleStart: blockStream exec: aSeqExecutor pending: pe
 	frame := pendingFrames first.
 	blockStream updateFrame: frame.
 	pendingFrames removeFirst.
-	aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime
+	aSeqExecutor registerStarted: sequence on: frame at: blockStream currentTime.
+	^true
 ]

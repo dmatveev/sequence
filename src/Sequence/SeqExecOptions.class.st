@@ -14,7 +14,8 @@ Class {
 		'sequence',
 		'framePolicy',
 		'usePipelining',
-		'mailboxSize'
+		'mailboxSize',
+		'parallelBranches'
 	],
 	#category : #Sequence
 }
@@ -41,6 +42,11 @@ SeqExecOptions >> hasFrameDropAllowed [
 	^allowFrameDrop
 ]
 
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> hasParallelBranches [
+	^parallelBranches
+]
+
 { #category : #testing }
 SeqExecOptions >> hasPipeliningEnabled [
 	^usePipelining
@@ -51,6 +57,7 @@ SeqExecOptions >> initialize [
 	super initialize.
 	allowFrameDrop := false.
 	usePipelining := false.
+	parallelBranches := false.
 	priority := 0.
 	mailboxSize := 1.
 ]
@@ -104,6 +111,11 @@ SeqExecOptions >> sequence: aSequence [
 	self assert: framePolicy isNil. "FIXME: Same may apply to inputStream too, but that's a mess"
 
 	sequence := aSequence.
+]
+
+{ #category : #'as yet unclassified' }
+SeqExecOptions >> useParallelBranches [
+	parallelBranches := true.
 ]
 
 { #category : #'as yet unclassified' }

@@ -26,11 +26,12 @@ SeqNaiveMultiExecutor >> add: aSequence options: seqExecOptions [
 	
 	"FIXME: Sheer ugliness."
 	seqExecOptions sequence: aSequence.
-	
-	"Short-cut: if pipelineing option is selected, add it this way"
 	firstBlock := aSequence topoSorted first.
 	opBlocks := aSequence topoSorted allButFirst.
-	(seqExecOptions hasPipeliningEnabled and: (opBlocks size > 1)) ifTrue: [ ^self addPipeline: aSequence topoSorted options: seqExecOptions ].
+	
+	"Short-cut: if pipelineing or parallel branches option is selected, add it this way"
+	((opBlocks size > 1) and: [ seqExecOptions hasPipeliningEnabled or: seqExecOptions hasParallelBranches ])
+		ifTrue: [ ^self addPipeline: aSequence topoSorted options: seqExecOptions ].
 
 	"Add stream(s) associated with the sequence to the executor."
 	(firstBlock isLive and: opBlocks isEmpty) ifTrue: [ ^self addLiveStream: firstBlock options: seqExecOptions ].
@@ -153,13 +154,13 @@ SeqNaiveMultiExecutor >> addOpStream: opBlocks options: seqBlockOptions [
 
 { #category : #private }
 SeqNaiveMultiExecutor >> addPipeline: allBlocks options: seqExecOptions [
-	| inputFrame liveStream pendingInputFrames mail |
+	| inputFrame liveStream pendingInputFrames nonTermBlocks mail termBlocks completions prevCompleted |
 	
 	"Validate if we can support this case. So far the support is fairly limited (only linked-list-like
 	pipeliens)"
 	allBlocks first isLive ifFalse: [ SeqLiveSourceMustBeFirst new signal ].
-	allBlocks do: [ :each | (each producers size > 1 or: (each consumers size > 1))
-		ifTrue: [ self error: 'Only linked-list-like sequences supported for pipelining simulation' ] ]. "FIXME: Exception!"
+	allBlocks do: [ :each | (each producers size > 1 "or: (each consumers size > 1)")
+		ifTrue: [ self error: 'Only tree-like sequences supported for pipelining simulation' ] ]. "FIXME: Exception!"
 		
 	"Set-up the live stream first."
 	"NOTE: This is an exact copy of other addLive... options"
@@ -182,41 +183,62 @@ SeqNaiveMultiExecutor >> addPipeline: allBlocks options: seqExecOptions [
 	mail := Dictionary new.
 	allBlocks allButFirst do: [ :each | mail at: each put: (SeqMailbox options: seqExecOptions) ].
 	
+	prevCompleted := true.
+	
 	"Set-up the first operation then. Note: it is special as it may drop frames."
 	allBlocks second streams timesRepeat: [ | firstBlockStream | 
 	firstBlockStream := SeqEventStream with: allBlocks second.
 	firstBlockStream
-		canStartTest: [ pendingInputFrames isEmpty not and: (mail at: allBlocks second consumers anyOne) hasFreeSpace ];
-		onStart:      [ seqExecOptions framePolicy handleStart: firstBlockStream exec: self pending: pendingInputFrames ];
-		onComplete:   [ (mail at: allBlocks second consumers anyOne) put: firstBlockStream thisFrame ];
+		canStartTest: [ | can |
+			can := pendingInputFrames isEmpty not.
+			can := can and: (allBlocks second consumers allSatisfy: [ :each | (mail at: each) hasFreeSpace ]).
+			(seqExecOptions hasParallelBranches and: (seqExecOptions hasPipeliningEnabled not)) ifTrue: [ 
+				can := can and: prevCompleted ].
+			can ];
+		onStart:      [ | started |
+			started := seqExecOptions framePolicy handleStart: firstBlockStream exec: self pending: pendingInputFrames.
+			started ifTrue: [ prevCompleted := false. ] ];
+		onComplete:   [ allBlocks second consumers do: [ :each | (mail at: each) put: firstBlockStream thisFrame ]];
 			"FIXME: There may be race between instances (data overwritten before read). Fortunately #put: handles collision"
 		priority: seqExecOptions priority;
 		scheduler: self scheduler.
 	streams add: firstBlockStream].
 	
 	"Set-up interim operations"
-	streams addAll: ((allBlocks copyFrom: 3 to: allBlocks size - 1) collect: [ :each |
-		(1 to: each streams) collect: [:u || workerStream |
+	nonTermBlocks := (allBlocks allButFirst: 2) reject: [ :each | each consumers isEmpty ].
+	streams addAll: (nonTermBlocks collect: [ :each |
+		(1 to: each streams) collect: [:unused || workerStream |
 		workerStream := SeqEventStream with: each.
 		workerStream 
-			canStartTest: [ (mail at: each) hasContent and: (mail at: each consumers anyOne) hasFreeSpace ];
+			canStartTest: [ (mail at: each) hasContent and: (
+				each consumers allSatisfy: [ :cons | (mail at: cons) hasFreeSpace ]) ];
 			onStart:      [ workerStream updateFrame: (mail at: each) takeOne ];
-			onComplete:   [ (mail at: each consumers anyOne) put: workerStream thisFrame ];
+			onComplete:   [ each consumers do: [ :cons | (mail at: cons) put: workerStream thisFrame ] ];
 				"FIXME: There may be race between instances (data overwritten before read). Fortunately #put: handles collision"
 			priority: seqExecOptions priority;
 			scheduler: self scheduler;
 			yourself]]) flattened. "FIMXE: Refactor!!!"
 
-	"Set-up the last (completer) stream"
-	allBlocks last streams timesRepeat: [ | lastBlockStream |
-	lastBlockStream := SeqEventStream with: allBlocks last.
-	lastBlockStream
-		canStartTest: [ (mail at: allBlocks last) hasContent ];
-		onStart:      [ lastBlockStream updateFrame: (mail at: allBlocks last) takeOne. ];
-		onComplete:   [ self registerCompleted: seqExecOptions sequence on: lastBlockStream thisFrame at: lastBlockStream currentTime  ];
-		priority: seqExecOptions priority;
-		scheduler: self scheduler.
-	streams add: lastBlockStream].
+	"Set-up the last (completer) streams"
+	completions := Dictionary new.
+	termBlocks := (allBlocks allButFirst: 2) select: [ :each | each consumers isEmpty ].
+	streams addAll: (termBlocks collect: [:each | 
+		(1 to: each streams) collect: [ :unused || completerStream |
+			completerStream := SeqEventStream with: each.
+			completerStream
+				canStartTest: [ (mail at: each) hasContent ];
+				onStart:      [ completerStream updateFrame: (mail at: each) takeOne. ];
+				onComplete:   [
+					completions
+						at: completerStream thisFrame "FIXME: Ugly"
+						update: [ :x | x + 1 ]
+						initial: 1.
+					(completions at: completerStream thisFrame) = termBlocks size ifTrue: [ 
+						self registerCompleted: seqExecOptions sequence on: completerStream thisFrame at: completerStream currentTime.
+						prevCompleted := true ]];
+				priority: seqExecOptions priority;
+				scheduler: self scheduler;
+				yourself]]) flattened.
 ]
 
 { #category : #private }
