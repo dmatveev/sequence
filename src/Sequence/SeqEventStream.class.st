@@ -89,7 +89,8 @@ SeqEventStream >> currentTime [
 SeqEventStream >> enterNewBlock [
 	thisBlock := blockStream peek.
 	thisToken := thisBlock target tryLock: thisBlock at: thisTimePoint inContextOf: thisFrame.
-	thisToken ifNil: [ self error: 'Should never happen, please check our resource allocation' ].
+	thisToken ifNil: [ self error: 'Should never happen, please check our resource allocation' ].	
+	thisBlock target confirm: self. "Ideally should happen automatically in tryLock"
 	nextEventTime := thisTimePoint + (thisBlock durationOn: thisFrame).
 ]
 

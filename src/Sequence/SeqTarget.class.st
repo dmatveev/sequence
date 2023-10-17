@@ -35,6 +35,14 @@ SeqTarget >> canLock: aSeqBlock inContextOf: anEventStream managedBy: aScheduler
 
 ]
 
+{ #category : #'as yet unclassified' }
+SeqTarget >> confirm: aStream [
+	waitlist removeKey: aStream ifAbsent: [ 
+		"Do nothing, it is OK if there's no stream in the
+		waitlist - probably it wasn't waitlisted at all
+		(no resource contention)" ].
+]
+
 { #category : #modelling }
 SeqTarget >> events [
 	"Return events from the 1st lane by default"
@@ -53,7 +61,11 @@ SeqTarget >> initialize [
 	 due to extra execLanes initialization (see #lanes:)"
 	self lanes: 1.
 	lockedLanes := Dictionary new.
-	waitlist := Set new.
+	
+	"Waitlist is a dictionary:
+	From EventStream (FIXME: whoah, we know about streams here!) to
+	the time point it was first waitlisted."
+	waitlist := Dictionary new.
 ]
 
 { #category : #accessing }
@@ -98,9 +110,17 @@ SeqTarget >> tryLock: aSeqBlock at: aDuration inContextOf: aFrame [
 	toLock ifEmpty: [
 		"Policy couldn't allocate anything"
 		^nil ].
+	
+	"Confirm the lock."
 	toLock do: [ :lane | lane lock: aSeqBlock at: aDuration inContextOf: aFrame ].
 	token := SeqLock with: aSeqBlock.
 	lockedLanes at: token put: toLock.
+	
+	"Waitlist should've been updated here as well, but this method
+	has no proper way to identify which stream to de-waitlist based
+	on thisContext. So, instead, there's an ugly #confirm: which now
+	is sent as a follow-up"
+	
 	^token.
 ]
 
@@ -111,5 +131,8 @@ SeqTarget >> waitlist [
 
 { #category : #'as yet unclassified' }
 SeqTarget >> waitlist: aSeqEventStream [ 
-	waitlist add: aSeqEventStream
+	waitlist 
+		at: aSeqEventStream
+		update: [ :t | t min: aSeqEventStream currentTime ]
+		initial: [ aSeqEventStream currentTime ]
 ]
