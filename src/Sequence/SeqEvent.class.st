@@ -6,7 +6,8 @@ Class {
 		'block',
 		'frame',
 		'lane',
-		'duration'
+		'duration',
+		'readyToStartTime'
 	],
 	#category : #Sequence
 }
@@ -75,6 +76,11 @@ SeqEvent >> printOn: aStream [
 	frame id printOn: aStream.
 ]
 
+{ #category : #'as yet unclassified' }
+SeqEvent >> readyToStartTime: aDuration [ 
+	readyToStartTime := aDuration
+]
+
 { #category : #accessors }
 SeqEvent >> seqBlock [
 	^block
@@ -88,4 +94,16 @@ SeqEvent >> startTime [
 { #category : #accessing }
 SeqEvent >> startTime: anObject [
 	startTime := anObject
+]
+
+{ #category : #'as yet unclassified' }
+SeqEvent >> waitStartTime [
+	^ readyToStartTime
+		ifNotNil: [ startTime - readyToStartTime ]
+		ifNil: [ 0 ms "Make sure it is returned as Duration" ]
+]
+
+{ #category : #'as yet unclassified' }
+SeqEvent >> waitTime [
+	^self waitStartTime "+ waitEndTime"
 ]

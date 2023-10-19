@@ -6,7 +6,8 @@ Class {
 		'execLanes',
 		'lockedLanes',
 		'name',
-		'waitlist'
+		'waitlist',
+		'incubator'
 	],
 	#category : #Sequence
 }
@@ -40,7 +41,11 @@ SeqTarget >> confirm: aStream [
 	waitlist removeKey: aStream ifAbsent: [ 
 		"Do nothing, it is OK if there's no stream in the
 		waitlist - probably it wasn't waitlisted at all
-		(no resource contention)" ].
+		(no resource contention).
+		FIXME: MAYBE this is the point where incubator needs
+		to be updated. Right now it happens in #waitlist and
+		sort-of duplicates it the waitlist itself to some
+		extent" ].
 ]
 
 { #category : #modelling }
@@ -60,12 +65,20 @@ SeqTarget >> initialize [
 	 "Initialize with the default value. Not a simple assignment
 	 due to extra execLanes initialization (see #lanes:)"
 	self lanes: 1.
+	
+	"Lanes which are currently locked.
+	SeqToken -> Array of Lanes"
 	lockedLanes := Dictionary new.
 	
 	"Waitlist is a dictionary:
-	From EventStream (FIXME: whoah, we know about streams here!) to
-	the time point it was first waitlisted."
+	EventStream* -> the time point it was first waitlisted
+	*(FIXME: whoah, we know about streams here!)"
 	waitlist := Dictionary new.
+	
+	"Incubator holds information about events which are ready to start,
+	but can't due to resource contention.
+	EventStream -> waitlist time."
+	incubator := Dictionary new.
 ]
 
 { #category : #accessing }
@@ -98,8 +111,22 @@ SeqTarget >> name: aString [
 
 { #category : #scheduling }
 SeqTarget >> release: aToken [
-	(lockedLanes at: aToken) do: [ :each | each release: aToken seqBlock ].
-	lockedLanes removeKey: aToken
+	| events |
+	events := (lockedLanes at: aToken) collect: [ :each | each release: aToken seqBlock ].
+	lockedLanes removeKey: aToken.
+	^events
+]
+
+{ #category : #scheduling }
+SeqTarget >> release: aToken in: aSeqStream [
+	"FIMXE: Whoah. We know about SeqStream again"
+	| events |
+	events := self release: aToken.
+	incubator
+		at: aSeqStream
+		ifPresent: [ :waitlisted |
+			events do: [ :each | each readyToStartTime: waitlisted ].
+			incubator removeKey: aSeqStream. ]	
 ]
 
 { #category : #modelling }
@@ -131,8 +158,15 @@ SeqTarget >> waitlist [
 
 { #category : #'as yet unclassified' }
 SeqTarget >> waitlist: aSeqEventStream [ 
+	| now |
+	now := aSeqEventStream currentTime.
+	
 	waitlist 
 		at: aSeqEventStream
-		update: [ :t | t min: aSeqEventStream currentTime ]
-		initial: [ aSeqEventStream currentTime ]
+		update: [ :t | t min: now ]
+		initial: [ 
+			"Probably not the best use of #initial but it works..
+			Use this point to create an incubator event."
+			incubator at: aSeqEventStream put: now. 
+			now ]
 ]

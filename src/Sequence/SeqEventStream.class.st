@@ -163,7 +163,7 @@ SeqEventStream >> initialize [
 
 { #category : #private }
 SeqEventStream >> leaveThisBlock [
-	thisBlock target release: thisToken.
+	thisBlock target release: thisToken in: self.
 	thisToken := nil.
 	blockStream next.
 	thisTimePoint := nextEventTime.

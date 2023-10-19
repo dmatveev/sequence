@@ -17,7 +17,8 @@ Class {
 		'colorByFrames',
 		'showOutputLatencies',
 		'showUtilization',
-		'lanesToShow'
+		'lanesToShow',
+		'showIdleTime'
 	],
 	#category : #Sequence
 }
@@ -36,7 +37,7 @@ SeqTrace >> add: aSequence over: sequenceCounters [
 	targets addAll: aSequence targets.
 ]
 
-{ #category : #rendering }
+{ #category : #'private - rendering' }
 SeqTrace >> addLegend: view [ 
 	| lb percent |
 	percent := [ :u | (100 * u) round: 2 ].
@@ -44,31 +45,12 @@ SeqTrace >> addLegend: view [
 	lb
 		beFixedWithTitle: 'Statistics'.
 	sequences do: [ :each |
-		| cntrs completed dropped dropStr |
+		| cntrs |
 		cntrs := counters at: each.
 		"FIXME: This is a looong time broken for the old Naive executor!"
-		completed := cntrs at: #completedFrames.
-		dropped := cntrs at: #droppedFrames ifAbsent: [0]. "FIXME: Mono schedulers don't put #droppedFrames"
-		dropStr := showFrameDrops ifTrue: [ dropped printString, '/' ] ifFalse: [ '' ].
-		lb text: (' ' join: {
-			each name. 'latency avg.:'.
-			"Note: not using #asMilliseconds to keep the .xx fractional part"
-			(cntrs at: #latencyAverage) asMicroseconds / 1000.0.
-			'ms, med.:'.
-			(cntrs at: #latencyMedian) asMicroseconds / 1000.0.
-			'ms, max:'.
-			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
-			'ms,'.
-			'[', dropStr, (dropped + completed) printString, ']'}).
-		showOutputLatencies ifTrue: [
-			lb text: (' ' join: {
-				each name. 'output avg.:'.
-				(cntrs at: #outputAverage) asMicroseconds / 1000.0.
-				'ms, med.:'.
-				(cntrs at: #outputMedian) asMicroseconds / 1000.0.
-				'ms, max:'.
-				(cntrs at: #outputMax) asMicroseconds / 1000.0.
-				'ms' }) ]].
+		lb text: (self legendLatencies: each).
+		showOutputLatencies ifTrue: [ lb text: (self legendOutputLatencies: each) ].
+		showIdleTime ifTrue: [lb text: (self legendIdleTime: each)]].
 	showUtilization ifTrue: [ 
 		(lanesToShow ifNil: [allLanes]) do: [ :lane |
 			lb text: (' ' join: { 'Lane'. lane hash. ':'. lane utilization }) ] ].
@@ -99,7 +81,7 @@ SeqTrace >> allLanes [
 		allLanes := wLive contents, wRest contents].
 ]
 
-{ #category : #rendering }
+{ #category : #'private - rendering' }
 SeqTrace >> boxFor: ev [
 	| idx w h box  label |
 	idx := self allLanes indexOf: ev lane.
@@ -161,6 +143,7 @@ SeqTrace >> initialize [
 	showFrameDrops := false.
 	showLabels := false.
 	showOutputLatencies := false.
+	showIdleTime := false.
 	showUtilization := false.
 	colorByFrames := false.
 	border := RSBorder new color: #veryDarkGray; width: 0.25; yourself.
@@ -201,6 +184,63 @@ SeqTrace >> laneYs [
 		laneYs := w contents	]
 ]
 
+{ #category : #'private - rendering' }
+SeqTrace >> legendIdleTime: aSequence [ 
+	| evs spentWaiting |
+	evs := self allEvents select: [ :each |
+		"Select events belonging to the given sequence AND not caused
+		by live blocks (assume they never block.. so their 0s waiting time
+		can alter the statistics dramatically.
+		TODO: Probably idle time can be calculated only for Targets of interest"
+		each frame sequence == aSequence and: [ 
+			each block isLive not ] ].
+	spentWaiting := evs asArray collect: [ :each | each waitTime ].
+	^' ' join: {
+		aSequence name. 'ilde avg.:'.
+		spentWaiting average asMicroseconds / 1000.0.
+		'ms, med.:'.
+		spentWaiting median asMicroseconds / 1000.0.
+		'ms, max:'.
+		spentWaiting max asMicroseconds / 1000.0.
+		'ms' }
+]
+
+{ #category : #'private - rendering' }
+SeqTrace >> legendLatencies: aSequence [ 
+	| cntrs completed dropped dropStr |
+		cntrs := counters at: aSequence.
+
+		"FIXME: This is a looong time broken for the old Naive executor!"
+		completed := cntrs at: #completedFrames.
+		dropped := cntrs at: #droppedFrames ifAbsent: [0]. "FIXME: Mono schedulers don't put #droppedFrames"
+		dropStr := showFrameDrops ifTrue: [ dropped printString, '/' ] ifFalse: [ '' ].
+		^ (' ' join: {
+			aSequence name. 'latency avg.:'.
+			"Note: not using #asMilliseconds to keep the .xx fractional part"
+			(cntrs at: #latencyAverage) asMicroseconds / 1000.0.
+			'ms, med.:'.
+			(cntrs at: #latencyMedian) asMicroseconds / 1000.0.
+			'ms, max:'.
+			(cntrs at: #latencyMax) asMicroseconds / 1000.0.
+			'ms,'.
+			'[', dropStr, (dropped + completed) printString, ']'}).
+
+]
+
+{ #category : #'private - rendering' }
+SeqTrace >> legendOutputLatencies: aSequence [ 
+	| cntrs |
+	cntrs := counters at: aSequence.
+	^' ' join: {
+		aSequence name. 'output avg.:'.
+		(cntrs at: #outputAverage) asMicroseconds / 1000.0.
+		'ms, med.:'.
+		(cntrs at: #outputMedian) asMicroseconds / 1000.0.
+		'ms, max:'.
+		(cntrs at: #outputMax) asMicroseconds / 1000.0.
+		'ms' }
+]
+
 { #category : #accessors }
 SeqTrace >> numFrames [
 	"Aux method. Should be called for Mono case only"
@@ -215,7 +255,7 @@ SeqTrace >> numFrames: anObject [
 	counters at: sequences first put: anObject.
 ]
 
-{ #category : #private }
+{ #category : #'private - rendering' }
 SeqTrace >> positionFor: anEvent [
 	| x y idx offsetFix |
 	idx := self allLanes indexOf: anEvent lane. "This may be a bottleneck"
@@ -227,7 +267,7 @@ SeqTrace >> positionFor: anEvent [
 	^(x @ y) translateBy: offsetFix.
 ]
 
-{ #category : #rendering }
+{ #category : #'private - rendering' }
 SeqTrace >> renderOn: view [ 
 	| es |
 	es := self allEvents collect: [ :ev | self boxFor: ev].
@@ -248,6 +288,11 @@ SeqTrace >> sequence: aSequence [
 { #category : #setup }
 SeqTrace >> showFrameDrops [
 	showFrameDrops := true.
+]
+
+{ #category : #setup }
+SeqTrace >> showIdleTime [
+	showIdleTime := true.
 ]
 
 { #category : #setup }

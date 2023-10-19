@@ -53,6 +53,7 @@ SeqLane >> release: aSeqBlock [
 	ev lane: self.
 	events add: ev.
 	currentSeqBlock := nil.
+	^ev.
 ]
 
 { #category : #rendering }
