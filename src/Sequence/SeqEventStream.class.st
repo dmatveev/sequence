@@ -15,7 +15,8 @@ Class {
 		'canStartBlock',
 		'startBlockCalled',
 		'priority',
-		'sched'
+		'sched',
+		'gotDelayedRelease'
 	],
 	#category : #Sequence
 }
@@ -73,7 +74,9 @@ SeqEventStream >> canWork [
 	thisState = #ready ifTrue: [ ^self targetIsAvailable ].
 	
 	"In #exec state, we can work if: thisBlock is already locked (leave it) OR it can lock (enter it)"
-	thisState = #exec ifTrue: [ ^thisToken isNotNil or: [ self targetIsAvailable ]].
+	thisState = #exec ifTrue: [ ^thisToken
+		ifNil: [ self targetIsAvailable ]
+		ifNotNil: [ self targetReleaseIsAvailable ]].
 	
 	"...in all other cases."
 	self error: 'Unhandled state'.
@@ -87,14 +90,18 @@ SeqEventStream >> currentTime [
 
 { #category : #private }
 SeqEventStream >> enterNewBlock [
+	| thisTarget |
 	thisBlock := blockStream peek.
-	thisToken := thisBlock target tryLock: thisBlock at: thisTimePoint inContextOf: thisFrame.
+	thisTarget := thisBlock target.
+	thisToken := thisTarget tryLock: thisBlock at: thisTimePoint inContextOf: thisFrame.
 	thisToken ifNil: [ self error: 'Should never happen, please check our resource allocation' ].	
-	thisBlock target confirm: self. "Ideally should happen automatically in tryLock"
-	nextEventTime := thisTimePoint + (thisBlock durationOn: thisFrame).
+	thisTarget confirm: self. "FIXME: Ideally should happen automatically in tryLock"
+	sched ifNotNil: [ sched informLocked: thisTarget for: self at: thisTimePoint ]. "FIXME: Should happen in tryLock too."
+	nextEventTime := thisTimePoint + (thisBlock durationOn: thisFrame). "Note: This is _expected_ next time. It may be delayed"
+	gotDelayedRelease := false.
 ]
 
-{ #category : #initialization }
+{ #category : #simulation }
 SeqEventStream >> handleAdvanceExec [
 	thisToken
 		ifNil: [self enterNewBlock ]
@@ -146,6 +153,7 @@ SeqEventStream >> initialize [
 	nextEventTime := 0 ms.
 	thisState := #idle.
 	startBlockCalled := false.
+	gotDelayedRelease := false.
 	
 	"Define the FSM:
                      #updateFrame:     . #advance . . . .
@@ -163,9 +171,13 @@ SeqEventStream >> initialize [
 
 { #category : #private }
 SeqEventStream >> leaveThisBlock [
-	thisBlock target release: thisToken in: self.
+	| thisTarget |
+	thisTarget := thisBlock target.
+	thisTarget release: thisToken in: self.
+	sched ifNotNil: [ sched informReleased: thisTarget for: self at: thisTimePoint ]. "FIXME: Should happen in Target>>#release?"
 	thisToken := nil.
 	blockStream next.
+	self assert: nextEventTime >= thisTimePoint.
 	thisTimePoint := nextEventTime.
 
 ]
@@ -222,6 +234,22 @@ SeqEventStream >> seqBlocks: aCollection [
 ]
 
 { #category : #attributes }
+SeqEventStream >> shouldUpdateNextTime [
+	(#(idle ready) includes: thisState) ifTrue: [^true].
+	 
+	thisState = #exec ifTrue: [
+		"Missing tocken in #exec mode means block couldn't lock -> so stream is waiting
+		(probably a new state should be introduced??). In this case, its time point can
+		be shifted"
+		thisToken ifNil: [ ^true ].
+		(thisToken isNotNil and: gotDelayedRelease) ifTrue: [ ^true ].
+		"OK but WHAT nextTime should be in this case? It is unpredictable.
+		We don't know when scheduler allows to release"].
+
+	^false "all other cases"
+]
+
+{ #category : #attributes }
 SeqEventStream >> targetIsAvailable [
 	"Answers if the current block can enter its execution target.
 	Used only in #canWork (in #ready and #exec states)"
@@ -230,13 +258,40 @@ SeqEventStream >> targetIsAvailable [
 	nextBlock := blockStream peek.
 	
 	^sched
+		"FIXME: Abstraction leak here? We rely on the availability of scheduler here.
+		In fact it could be liften down to a single call to #target.
+		(Or delegated to scheduler once scheduler becomes omnipresent, as now it can be nil)"
 		ifNil: [ nextBlock target canLock: nextBlock ]
 		ifNotNil: [ | can |
 			can := nextBlock target canLock: nextBlock inContextOf: self managedBy: sched.
 
-			"If the target was not available right now, inform scheduler there is a process waiting for that.
+			"If the target was not available right now, inform target there is a process waiting for that.
 			NB.: Maybe with 'target queues' concept it would be easier to implement"
 			can ifFalse: [ nextBlock target waitlist: self ].
+			can ]
+]
+
+{ #category : #attributes }
+SeqEventStream >> targetReleaseIsAvailable [
+	"Answers if the current block can release its execution target.
+	Used only in #canWork (in #ready and #exec states).
+	YES it is the case sometimes. By default, block should always be
+	able to release the target, but in some cases (like w/reordering)
+	some extra control happening. Anyway we don't know this deatils
+	here, delegate to the scheduler instead."
+	
+	| nextBlock |
+	nextBlock := blockStream peek.
+	
+	^sched
+		"FIXME: Abstraction leak here? See the same note in #targetIsAvailable"
+		ifNil: [ true "No scheduler - no control" ]
+		ifNotNil: [ | can |
+			can := sched askReleaseOn: nextBlock target for: self at: nextBlock.
+
+			"If scheduler says we can't release control right now, let Target now
+			we're ready to do that."
+			can ifFalse: [ nextBlock target indicate: self. gotDelayedRelease := true ]. 
 			can ]
 ]
 
@@ -264,13 +319,14 @@ SeqEventStream >> updateFrame: aSeqFrame [
 { #category : #attributes }
 SeqEventStream >> updateTimePoint: aTimePoint [
 	"Self-check. A time point shouldn't be updated for the stream until the #nextEvent happen.
-	Applies only to #exec state."
-	(thisState = #exec and: (thisToken isNotNil)) ifTrue: [ self assert: nextEventTime >= aTimePoint ].
+	Applies only to #exec state when block can be Released"
+	(thisState = #exec and: [thisToken isNotNil and: gotDelayedRelease not])
+		ifTrue: [ self assert: nextEventTime >= aTimePoint ].
 	thisTimePoint := aTimePoint.
-	(thisState = #idle or:
-		(thisState = #ready or:
-			(thisState = #exec and: (thisToken isNil)))) ifTrue: [ nextEventTime := thisTimePoint. ]
-
+	
+	"Shift nextEventTime for this stream, if required."
+	self shouldUpdateNextTime ifTrue: [
+		 nextEventTime := nextEventTime max: thisTimePoint ].
 ]
 
 { #category : #modelling }

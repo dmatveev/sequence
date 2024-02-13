@@ -7,13 +7,17 @@ Class {
 		'lockedLanes',
 		'name',
 		'waitlist',
-		'incubator'
+		'incubator',
+		'resort'
 	],
 	#category : #Sequence
 }
 
 { #category : #modelling }
 SeqTarget >> canLock: aSeqBlock [
+	"FIXME: Is it test-only method now? What's the difference between this and
+	canLock:  inContextOf:  managedBy: ?
+	It seems now it is called only in scheduler-aware cases (in addition to tests)"
 	^(self lanesToLock: aSeqBlock) isNotEmpty
 ]
 
@@ -59,6 +63,20 @@ SeqTarget >> execLanes [
 	^ execLanes
 ]
 
+{ #category : #'as yet unclassified' }
+SeqTarget >> indicate: aSeqEventStream [ 
+	"Record that a particular stream completed its block on this target,
+	however can't release it due to scheduler behavior.
+	Let them rest in the resort. When the block is permitted to release,
+	its execution/wait time will be adjusted in #release:"
+	| now |
+	now := aSeqEventStream currentTime.
+	resort
+		at: aSeqEventStream
+		update: [:t | t min: now ]
+		initial: [ now ].
+]
+
 { #category : #initialization }
 SeqTarget >> initialize [
 	super initialize.
@@ -79,6 +97,11 @@ SeqTarget >> initialize [
 	but can't due to resource contention.
 	EventStream -> waitlist time."
 	incubator := Dictionary new.
+	
+	"Resort holds information about streams which completed their work
+	on the target, but couldn't release it due to scheduler behavior.
+	EventStream -> completion time."
+	resort := Dictionary new.
 ]
 
 { #category : #accessing }
@@ -126,7 +149,15 @@ SeqTarget >> release: aToken in: aSeqStream [
 		at: aSeqStream
 		ifPresent: [ :waitlisted |
 			events do: [ :each | each readyToStartTime: waitlisted ].
-			incubator removeKey: aSeqStream. ]	
+			incubator removeKey: aSeqStream ].
+	resort
+		at: aSeqStream
+		ifPresent: [ :delayed |
+			events do: [ :each | each
+				"This is an ugly construct..."
+				readyToCompleteTime: delayed;
+				releaseTime: aSeqStream currentTime ].
+			resort removeKey: aSeqStream ]
 ]
 
 { #category : #modelling }

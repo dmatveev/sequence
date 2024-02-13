@@ -49,7 +49,7 @@ SeqLane >> release: aSeqBlock [
 	Probably I should use this object everywhere"
 	ev := SeqEvent on: currentLockTime with: currentSeqBlock inContextOf: currentFrame.
 	"TODO: One more thing: this is a duplication of information from #runFor"
-	ev duration: (aSeqBlock durationOn: currentFrame).
+	ev duration: (aSeqBlock durationOn: currentFrame). "Note - as release can be DELAYED, ut is not based on currentTime!"
 	ev lane: self.
 	events add: ev.
 	currentSeqBlock := nil.

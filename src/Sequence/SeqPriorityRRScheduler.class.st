@@ -16,7 +16,8 @@ SeqPriorityRRScheduler >> askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlo
 	aSeqTarget waitlist keys detect: [ :s | s priority > aSeqEventStream priority ]
 		ifFound: [ :s | ^false ].
 
-	^true	
+	"FIXME: Fragile base class problem? Call this only to involve callback"
+	^super askLockOn: aSeqTarget for: aSeqEventStream at: aSeqBlock  
 ]
 
 { #category : #'as yet unclassified' }
