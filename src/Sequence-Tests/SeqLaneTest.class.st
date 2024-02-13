@@ -6,7 +6,7 @@ Class {
 		'lane',
 		'frame'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Atoms'
 }
 
 { #category : #tests }

@@ -6,7 +6,7 @@ Class {
 		'finished',
 		'evStream'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-EventStreams'
 }
 
 { #category : #tests }

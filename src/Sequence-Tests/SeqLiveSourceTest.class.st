@@ -1,7 +1,7 @@
 Class {
 	#name : #SeqLiveSourceTest,
 	#superclass : #TestCase,
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Building'
 }
 
 { #category : #initialization }

@@ -7,7 +7,7 @@ Class {
 		'tgt',
 		'frame'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Targets'
 }
 
 { #category : #tests }

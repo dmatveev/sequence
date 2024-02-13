@@ -6,7 +6,7 @@ Class {
 		'b',
 		'c'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Building'
 }
 
 { #category : #running }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'sched'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Schedulers'
 }
 
 { #category : #tests }

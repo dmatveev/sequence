@@ -6,7 +6,7 @@ Class {
 		'priority',
 		'blockToWork'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-EventStreams'
 }
 
 { #category : #mock }

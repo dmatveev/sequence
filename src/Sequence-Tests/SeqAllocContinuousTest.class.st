@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'policy'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Atoms'
 }
 
 { #category : #running }

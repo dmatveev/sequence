@@ -1,7 +1,7 @@
 Class {
 	#name : #SeqFrameSourceTest,
 	#superclass : #TestCase,
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Atoms'
 }
 
 { #category : #tests }

@@ -1,7 +1,7 @@
 Class {
 	#name : #SeqDumbSchedulerTest,
 	#superclass : #TestCase,
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Schedulers'
 }
 
 { #category : #tests }

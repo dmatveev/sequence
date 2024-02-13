@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'exec'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Executor'
 }
 
 { #category : #tests }

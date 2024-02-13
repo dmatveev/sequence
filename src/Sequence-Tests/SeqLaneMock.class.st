@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'locked'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Targets'
 }
 
 { #category : #accessing }

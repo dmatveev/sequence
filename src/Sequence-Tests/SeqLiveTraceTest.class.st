@@ -6,7 +6,7 @@ Class {
 		'cam',
 		'proc'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Trace'
 }
 
 { #category : #initialization }

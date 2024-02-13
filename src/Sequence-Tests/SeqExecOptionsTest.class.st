@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'opts'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Atoms'
 }
 
 { #category : #tests }

@@ -1,7 +1,7 @@
 Class {
 	#name : #SequenceTest,
 	#superclass : #TestCase,
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Building'
 }
 
 { #category : #tests }

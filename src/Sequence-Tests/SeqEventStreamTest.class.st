@@ -1,7 +1,7 @@
 Class {
 	#name : #SeqEventStreamTest,
 	#superclass : #TestCase,
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-EventStreams'
 }
 
 { #category : #tests }

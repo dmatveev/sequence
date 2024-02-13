@@ -6,7 +6,7 @@ Class {
 		'lane',
 		'event'
 	],
-	#category : #'Sequence-Tests'
+	#category : #'Sequence-Tests-Atoms'
 }
 
 { #category : #running }
